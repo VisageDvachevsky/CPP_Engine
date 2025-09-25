@@ -52,7 +52,6 @@ void GUI::update(Scene& scene, Camera& camera, Renderer& renderer) {
     setupDockspace();
     showMenuBar();
     
-    // Update panels
     if (m_showToolBar) m_toolBar->show(scene, camera, renderer);
     if (m_showViewport) m_viewport->show(scene, camera, renderer);
     if (m_showOutliner) m_sceneOutliner->show(scene);
@@ -132,6 +131,8 @@ void GUI::setupDockspace() {
         ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
     }
+    
+    ImGui::End();
 }
 
 void GUI::showMenuBar() {
@@ -205,6 +206,7 @@ void GUI::setupUnrealStyle() {
     ImGuiStyle& style = ImGui::GetStyle();
     ImVec4* colors = style.Colors;
     
+    // Unreal Engine dark theme colors
     colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
     colors[ImGuiCol_WindowBg] = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);

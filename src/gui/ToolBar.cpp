@@ -11,25 +11,21 @@ ToolBar::ToolBar(Editor& editor) : m_editor(editor) {
 }
 
 void ToolBar::show(Scene& scene, Camera& camera, Renderer& renderer) {
-    ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | 
-                            ImGuiWindowFlags_NoMove | 
-                            ImGuiWindowFlags_NoResize |
-                            ImGuiWindowFlags_NoSavedSettings;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse;
     
-    ImGui::Begin("ToolBar", nullptr, flags);
-    
-    showTransformTools();
-    ImGui::SameLine();
-    ImGui::TextDisabled(" | "); 
-    ImGui::SameLine();
-    
-    showRenderSettings(renderer);
-    ImGui::SameLine();
-    ImGui::TextDisabled(" | ");
-    ImGui::SameLine();
-    
-    showCameraControls(camera);
-    
+    if (ImGui::Begin("ToolBar", nullptr, flags)) {
+        showTransformTools();
+        ImGui::SameLine();
+        ImGui::TextDisabled(" | "); 
+        ImGui::SameLine();
+        
+        showRenderSettings(renderer);
+        ImGui::SameLine();
+        ImGui::TextDisabled(" | "); 
+        ImGui::SameLine();
+        
+        showCameraControls(camera);
+    }
     ImGui::End();
 }
 

@@ -24,39 +24,42 @@ Viewport::~Viewport() = default;
 
 void Viewport::show(Scene& scene, Camera& camera, Renderer& renderer) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("Viewport");
     
-    m_isFocused = ImGui::IsWindowFocused();
-    m_isHovered = ImGui::IsWindowHovered();
-    
-    ImVec2 viewportSize = ImGui::GetContentRegionAvail();
-    if (viewportSize.x != m_viewportSize.x || viewportSize.y != m_viewportSize.y) {
-        m_viewportSize = Vec2{viewportSize.x, viewportSize.y};
-        m_framebuffer->resize(static_cast<int>(viewportSize.x), static_cast<int>(viewportSize.y));
-        LOG_DEBUG("Viewport resized to {}x{}", viewportSize.x, viewportSize.y);
+    if (ImGui::Begin("Viewport")) {
+        m_isFocused = ImGui::IsWindowFocused();
+        m_isHovered = ImGui::IsWindowHovered();
+        
+        ImVec2 viewportSize = ImGui::GetContentRegionAvail();
+        if (viewportSize.x > 0 && viewportSize.y > 0) {
+            if (viewportSize.x != m_viewportSize.x || viewportSize.y != m_viewportSize.y) {
+                m_viewportSize = Vec2{viewportSize.x, viewportSize.y};
+                m_framebuffer->resize(static_cast<int>(viewportSize.x), static_cast<int>(viewportSize.y));
+                LOG_DEBUG("Viewport resized to {}x{}", viewportSize.x, viewportSize.y);
+            }
+            
+            // Get viewport position
+            ImVec2 viewportPos = ImGui::GetCursorScreenPos();
+            m_viewportPos = Vec2{viewportPos.x, viewportPos.y};
+            
+            if (m_isFocused || m_isHovered) {
+                handleInput(scene, camera);
+            }
+            
+            renderViewportContent(scene, camera, renderer);
+            
+            ImGui::Image(
+                reinterpret_cast<void*>(m_framebuffer->getColorTexture()), 
+                ImVec2(m_viewportSize.x, m_viewportSize.y),
+                ImVec2(0, 1), ImVec2(1, 0) // Flip Y coordinate
+            );
+            
+            if (m_isFocused) {
+                renderGizmos(scene, camera);
+            }
+            
+            renderOverlays(scene, camera, renderer);
+        }
     }
-    
-    ImVec2 viewportPos = ImGui::GetCursorScreenPos();
-    m_viewportPos = Vec2{viewportPos.x, viewportPos.y};
-    
-    if (m_isFocused || m_isHovered) {
-        handleInput(scene, camera);
-    }
-    
-    renderViewportContent(scene, camera, renderer);
-    
-    ImGui::Image(
-        reinterpret_cast<void*>(m_framebuffer->getColorTexture()), 
-        ImVec2(m_viewportSize.x, m_viewportSize.y),
-        ImVec2(0, 1), ImVec2(1, 0) // Flip Y coordinate
-    );
-    
-    if (m_isFocused) {
-        renderGizmos(scene, camera);
-    }
-    
-    renderOverlays(scene, camera, renderer);
-    
     ImGui::End();
     ImGui::PopStyleVar();
 }
