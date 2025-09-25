@@ -1,4 +1,5 @@
 #include "Camera.h"
+#include "core/Logger.h"
 #include "core/Input.h"
 #include <algorithm>
 #include <cmath>
@@ -8,6 +9,12 @@
 #endif
 
 Camera::Camera() {
+    m_target = Vec3{0, 0, 0};
+    m_distance = 5.0f;
+    m_yaw = -90.0f;
+    m_pitch = 20.0f;
+    m_fov = 45.0f;
+    m_worldUp = Vec3{0, 1, 0};
     updateVectors();
 }
 
@@ -77,13 +84,17 @@ void Camera::updateVectors() {
     direction.z = std::sin(yawRad) * std::cos(pitchRad);
     
     m_front = direction.normalized();
-    m_position = m_target + m_front * m_distance;
+    m_position = m_target - m_front * m_distance;  
     
     // Calculate right and up vectors
     m_right = cross(m_front, m_worldUp).normalized();
     m_up = cross(m_right, m_front).normalized();
+    
+    // Отладочный вывод:
+    LOG_DEBUG("Camera pos: {:.3f} {:.3f} {:.3f}, target: {:.3f} {:.3f} {:.3f}", 
+          m_position.x, m_position.y, m_position.z,
+          m_target.x, m_target.y, m_target.z);
 }
-
 Mat4 Camera::getViewMatrix() const {
     return Mat4::lookAt(m_position, m_target, m_up);
 }

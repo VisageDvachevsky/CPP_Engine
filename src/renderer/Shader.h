@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math/Vec3.h"
+#include "math/Vec2.h"
 #include "math/Mat4.h"
 #include <string>
 #include <unordered_map>
@@ -20,6 +21,7 @@ public:
     void setFloat(const std::string& name, float value);
     void setVec3(const std::string& name, const Vec3& value);
     void setMat4(const std::string& name, const Mat4& value);
+    void setVec2(const std::string& name, const Vec2& value);
     
     unsigned int getID() const { return m_program; }
     bool isValid() const { return m_program != 0; }

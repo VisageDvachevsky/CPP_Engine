@@ -85,6 +85,8 @@ void Viewport::renderViewportContent(Scene& scene, Camera& camera, Renderer& ren
     m_framebuffer->bind();
     
     glViewport(0, 0, static_cast<int>(m_viewportSize.x), static_cast<int>(m_viewportSize.y));
+
+    renderer.setViewportSize(static_cast<int>(m_viewportSize.x), static_cast<int>(m_viewportSize.y));
     
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);

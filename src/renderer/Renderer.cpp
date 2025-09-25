@@ -141,6 +141,11 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
     Vec3 dir = camera.getDirection();
     Vec3 up = camera.getUp();
     Vec3 right = camera.getRight();
+
+    LOG_DEBUG("Viewport size: {:.0f} x {:.0f}", viewportSize.x, viewportSize.y);
+    LOG_DEBUG("Camera pos: {:.3f} {:.3f} {:.3f}", pos.x, pos.y, pos.z);
+    LOG_DEBUG("Camera dir: {:.3f} {:.3f} {:.3f}", dir.x, dir.y, dir.z);
+
     
     m_pathTracerShader->setVec3("u_cameraPos", pos);
     m_pathTracerShader->setVec3("u_cameraDir", dir);
@@ -148,13 +153,15 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
     m_pathTracerShader->setVec3("u_cameraRight", right);
     m_pathTracerShader->setFloat("u_fov", camera.getFov());
     
-    m_pathTracerShader->setVec3("u_resolution", Vec3(viewportSize.x, viewportSize.y, 0));
+    m_pathTracerShader->setVec2("u_resolution", viewportSize); 
     m_pathTracerShader->setFloat("u_time", Time::getTime());
     
     m_pathTracerShader->setInt("u_maxBounces", m_maxBounces);
     m_pathTracerShader->setInt("u_samplesPerPixel", m_samplesPerPixel);
     
     updateUniforms(scene, camera);
+
+    LOG_DEBUG("Scene has {} objects", scene.getObjects().size());
     
     glBindVertexArray(m_quadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);

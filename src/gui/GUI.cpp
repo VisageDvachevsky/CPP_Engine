@@ -199,14 +199,12 @@ void GUI::showMenuBar() {
         ImGui::EndMenuBar();
     }
     
-    ImGui::End();
 }
 
 void GUI::setupUnrealStyle() {
     ImGuiStyle& style = ImGui::GetStyle();
     ImVec4* colors = style.Colors;
     
-    // Unreal Engine dark theme colors
     colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
     colors[ImGuiCol_WindowBg] = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);

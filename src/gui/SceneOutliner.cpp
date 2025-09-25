@@ -56,7 +56,7 @@ void SceneOutliner::showObjectHierarchy(Scene& scene) {
                 case ObjectType::Cube: icon = "■"; break;
             }
             
-            std::string label = std::string(icon) + " " + obj->getName();
+            std::string label = std::string(icon) + " " + obj->getName() + "##" + std::to_string(i);
             ImGui::TreeNodeEx(label.c_str(), flags);
             
             if (ImGui::IsItemClicked()) {
@@ -70,7 +70,9 @@ void SceneOutliner::showObjectHierarchy(Scene& scene) {
                 ImGui::EndDragDropSource();
             }
             
-            if (ImGui::BeginPopupContextItem()) {
+            // ИСПРАВИТЬ ЭТОТ POPUP - добавить уникальный ID:
+            std::string popupId = "ObjectContext##" + std::to_string(i);
+            if (ImGui::BeginPopupContextItem(popupId.c_str())) {
                 ImGui::Text("Object: %s", obj->getName().c_str());
                 ImGui::Separator();
                 
