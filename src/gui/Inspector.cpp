@@ -53,7 +53,7 @@ void Inspector::showSceneHierarchy(Scene& scene) {
             ImGui::SliderFloat("Metalness", &material.metalness, 0.0f, 1.0f);
         }
     }
-} Context menu
+}   Context menu
         if (ImGui::BeginPopupContextItem()) {
             if (ImGui::MenuItem("Delete")) {
                 scene.removeObject(i);
