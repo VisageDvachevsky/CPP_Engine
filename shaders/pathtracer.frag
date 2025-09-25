@@ -3,7 +3,6 @@
 in vec2 TexCoord;
 out vec4 FragColor;
 
-// Camera uniforms
 uniform vec3 u_cameraPos;
 uniform vec3 u_cameraDir;
 uniform vec3 u_cameraUp;
@@ -11,12 +10,10 @@ uniform vec3 u_cameraRight;
 uniform float u_fov;
 uniform vec2 u_resolution;
 
-// Render settings
 uniform int u_maxBounces;
 uniform int u_samplesPerPixel;
 uniform float u_time;
 
-// Scene data
 #define MAX_SPHERES 16
 #define MAX_PLANES 4
 
@@ -58,7 +55,6 @@ struct HitInfo {
     float ior;
 };
 
-// Random number generation
 uint g_seed;
 
 uint hash(uint x) {
@@ -87,7 +83,6 @@ vec3 randomUnitVector() {
     return normalize(randomInUnitSphere());
 }
 
-// Ray-sphere intersection
 bool intersectSphere(Ray ray, Sphere sphere, out float t) {
     vec3 oc = ray.origin - sphere.center;
     float a = dot(ray.direction, ray.direction);
@@ -105,7 +100,6 @@ bool intersectSphere(Ray ray, Sphere sphere, out float t) {
     return t > 0.001;
 }
 
-// Ray-plane intersection
 bool intersectPlane(Ray ray, Plane plane, out float t) {
     float denom = dot(plane.normal, ray.direction);
     if (abs(denom) < 0.0001) return false;
@@ -114,13 +108,11 @@ bool intersectPlane(Ray ray, Plane plane, out float t) {
     return t > 0.001;
 }
 
-// Scene intersection
 HitInfo intersectScene(Ray ray) {
     HitInfo closestHit;
     closestHit.hit = false;
     closestHit.t = 1e30;
     
-    // Check spheres
     for (int i = 0; i < u_numSpheres; i++) {
         float t;
         if (intersectSphere(ray, u_spheres[i], t) && t < closestHit.t) {
@@ -135,7 +127,6 @@ HitInfo intersectScene(Ray ray) {
         }
     }
     
-    // Check planes
     for (int i = 0; i < u_numPlanes; i++) {
         float t;
         if (intersectPlane(ray, u_planes[i], t) && t < closestHit.t) {
@@ -152,13 +143,11 @@ HitInfo intersectScene(Ray ray) {
     return closestHit;
 }
 
-// Sky color (simple gradient)
 vec3 getSkyColor(vec3 direction) {
     float t = 0.5 * (direction.y + 1.0);
     return mix(vec3(1.0, 1.0, 1.0), vec3(0.5, 0.7, 1.0), t) * 0.8;
 }
 
-// Material scattering
 bool scatter(Ray inRay, HitInfo hit, out vec3 attenuation, out Ray scattered) {
     if (hit.materialType == 0) { // Diffuse
         vec3 target = hit.point + hit.normal + randomUnitVector();
@@ -234,7 +223,6 @@ vec3 rayColor(Ray ray) {
 void main() {
     vec2 uv = (2.0 * gl_FragCoord.xy - u_resolution) / u_resolution.y;
     
-    // Initialize random seed
     g_seed = uint(gl_FragCoord.x) + uint(gl_FragCoord.y) * uint(u_resolution.x) + uint(u_time * 1000.0);
     
     vec3 totalColor = vec3(0.0);

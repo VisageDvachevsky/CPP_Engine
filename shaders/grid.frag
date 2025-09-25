@@ -9,10 +9,8 @@ uniform vec3 u_gridColor;
 uniform float u_fadeDistance;
 
 void main() {
-    // Fade out grid lines based on distance
     float alpha = 1.0 - smoothstep(0.0, u_fadeDistance, DistanceFromCamera);
     
-    // Make axes more prominent
     bool isXAxis = abs(WorldPos.z) < 0.05;
     bool isZAxis = abs(WorldPos.x) < 0.05;
     
