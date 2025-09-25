@@ -1,3 +1,0 @@
-C:/users/Ya/desktop/pizda/build/CMakeFiles/MiniGPU.dir
-C:/users/Ya/desktop/pizda/build/CMakeFiles/edit_cache.dir
-C:/users/Ya/desktop/pizda/build/CMakeFiles/rebuild_cache.dir
