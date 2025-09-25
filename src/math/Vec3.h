@@ -14,6 +14,7 @@ struct Vec3 {
     Vec3 operator*(float s) const { return {x * s, y * s, z * s}; }
     Vec3 operator*(const Vec3& v) const { return {x * v.x, y * v.y, z * v.z}; }
     Vec3 operator/(float s) const { return {x / s, y / s, z / s}; }
+    Vec3 operator-() const { return {-x, -y, -z}; }  // Unary minus operator
     
     Vec3& operator+=(const Vec3& v) { x += v.x; y += v.y; z += v.z; return *this; }
     Vec3& operator-=(const Vec3& v) { x -= v.x; y -= v.y; z -= v.z; return *this; }
@@ -24,12 +25,12 @@ struct Vec3 {
     
     Vec3 normalized() const {
         float len = length();
-        return len > 0 ? *this / len : Vec3{0};
+        return len > 0.0001f ? *this / len : Vec3{0};
     }
     
     void normalize() {
         float len = length();
-        if (len > 0) {
+        if (len > 0.0001f) {
             x /= len; y /= len; z /= len;
         }
     }
@@ -37,6 +38,11 @@ struct Vec3 {
     float* data() { return &x; }
     const float* data() const { return &x; }
 };
+
+// Global operators for scalar * vector
+inline Vec3 operator*(float s, const Vec3& v) {
+    return v * s;
+}
 
 inline float dot(const Vec3& a, const Vec3& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;

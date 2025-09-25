@@ -21,7 +21,6 @@ void Time::update(float deltaTime) {
     s_time += deltaTime;
     s_frameCount++;
     
-    // Calculate FPS
     s_fpsTimer += deltaTime;
     s_fpsCounter++;
     

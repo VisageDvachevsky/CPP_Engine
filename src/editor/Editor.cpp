@@ -17,7 +17,6 @@ Editor::Editor(Window& window, Renderer& renderer, Scene& scene, Camera& camera)
 Editor::~Editor() = default;
 
 void Editor::initializeEditor() {
-    // Initialize editor systems
     m_editorCamera = std::make_unique<EditorCamera>(m_camera);
     m_selectionManager = std::make_unique<SelectionManager>(m_scene);
     m_transformGizmo = std::make_unique<TransformGizmo>();
@@ -35,34 +34,26 @@ void Editor::render() {
 }
 
 void Editor::updateEditor(float dt) {
-    // Update editor camera
     m_editorCamera->update(dt, m_isViewportFocused);
     
-    // Update selection system
     m_selectionManager->update();
     
-    // Update transform gizmos
     if (m_selectionManager->hasSelection()) {
         m_transformGizmo->update(*m_selectionManager->getSelectedObject(), m_camera);
     }
     
-    // Update GUI
     m_gui->update(m_scene, m_camera, m_renderer);
 }
 
 void Editor::renderEditor() {
-    // Render scene
     m_renderer.render(m_scene, m_camera);
     
-    // Render gizmos and editor elements
     if (m_selectionManager->hasSelection() && m_isViewportFocused) {
         m_transformGizmo->render(m_renderer, m_camera);
     }
     
-    // Render selection outline
     m_selectionManager->renderSelection(m_renderer, m_camera);
     
-    // Render GUI
     m_gui->render();
 }
 

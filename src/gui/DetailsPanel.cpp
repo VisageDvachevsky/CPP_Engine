@@ -4,6 +4,7 @@
 #include "scene/Material.h"
 
 #include <imgui.h>
+#include <cstring>
 
 void DetailsPanel::show(Scene& scene) {
     ImGui::Begin("Details");
@@ -31,7 +32,9 @@ void DetailsPanel::showObjectDetails(Scene& scene) {
     
     // Object name
     char name[256];
-    strcpy_s(name, sizeof(name), object->getName().c_str());
+    std::strncpy(name, object->getName().c_str(), sizeof(name) - 1);
+    name[sizeof(name) - 1] = '\0';
+    
     if (ImGui::InputText("Name", name, sizeof(name))) {
         object->setName(std::string(name));
     }
@@ -43,12 +46,10 @@ void DetailsPanel::showObjectDetails(Scene& scene) {
     
     ImGui::Spacing();
     
-    // Transform section
     showTransformSection(*object);
     
     ImGui::Spacing();
     
-    // Material section  
     showMaterialSection(*object);
 }
 
@@ -112,7 +113,6 @@ void DetailsPanel::showMaterialSection(Object& object) {
                 
             case MaterialType::Diffuse:
             default:
-                // No additional properties for diffuse
                 break;
         }
         

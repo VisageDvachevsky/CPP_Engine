@@ -1,5 +1,6 @@
 #pragma once
 
+#include "math/Vec2.h"
 #include "math/Vec3.h"
 #include "math/Ray.h"
 #include <vector>

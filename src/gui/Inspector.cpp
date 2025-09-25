@@ -5,6 +5,7 @@
 
 #include <imgui.h>
 #include <string>
+#include <cstring>
 
 void Inspector::show(Scene& scene) {
     ImGui::Begin("Inspector");
@@ -41,19 +42,7 @@ void Inspector::showSceneHierarchy(Scene& scene) {
             scene.setSelectedObject(obj.get());
         }
         
-        // Material-specific properties
-        if (material.type == MaterialType::Metal) {
-            ImGui::SliderFloat("Roughness", &material.roughness, 0.0f, 1.0f);
-        }
-        else if (material.type == MaterialType::Dielectric) {
-            ImGui::SliderFloat("IOR", &material.ior, 1.0f, 3.0f);
-        }
-        
-        if (material.type == MaterialType::Diffuse || material.type == MaterialType::Metal) {
-            ImGui::SliderFloat("Metalness", &material.metalness, 0.0f, 1.0f);
-        }
-    }
-}   Context menu
+        // Context menu
         if (ImGui::BeginPopupContextItem()) {
             if (ImGui::MenuItem("Delete")) {
                 scene.removeObject(i);
@@ -88,7 +77,9 @@ void Inspector::showObjectProperties(Scene& scene) {
     
     // Object name
     char name[256];
-    strcpy_s(name, selectedObject->getName().c_str());
+    std::strncpy(name, selectedObject->getName().c_str(), sizeof(name) - 1);
+    name[sizeof(name) - 1] = '\0';
+    
     if (ImGui::InputText("Name", name, sizeof(name))) {
         selectedObject->setName(std::string(name));
     }
@@ -115,4 +106,17 @@ void Inspector::showObjectProperties(Scene& scene) {
             material.type = static_cast<MaterialType>(currentType);
         }
         
-        //
+        // Material-specific properties
+        if (material.type == MaterialType::Metal) {
+            ImGui::SliderFloat("Roughness", &material.roughness, 0.0f, 1.0f);
+            ImGui::SliderFloat("Metalness", &material.metalness, 0.0f, 1.0f);
+        }
+        else if (material.type == MaterialType::Dielectric) {
+            ImGui::SliderFloat("IOR", &material.ior, 1.0f, 3.0f);
+        }
+    }
+}
+
+void Inspector::showRenderSettings() {
+    // Render settings could be shown 
+}

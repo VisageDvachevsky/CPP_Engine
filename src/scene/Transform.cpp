@@ -4,7 +4,6 @@
 Mat4 Transform::getMatrix() const {
     Mat4 translation = Mat4::translate(position);
     
-    // Simple rotation around Y axis for now
     float yawRad = rotation.y * (3.14159f / 180.0f);
     Mat4 rotationY;
     rotationY.m[0] = cos(yawRad);  rotationY.m[2] = sin(yawRad);
@@ -16,7 +15,6 @@ Mat4 Transform::getMatrix() const {
 }
 
 Mat4 Transform::getInverseMatrix() const {
-    // Simplified inverse: inverse order and inverse operations
     Mat4 invScale = Mat4::scale(Vec3{1.0f/scale.x, 1.0f/scale.y, 1.0f/scale.z});
     
     float yawRad = -rotation.y * (3.14159f / 180.0f); // Negative for inverse
@@ -44,7 +42,7 @@ void Transform::setFromMatrix(const Mat4& matrix) {
     scale.y = col1.length();
     scale.z = col2.length();
     
-    // Extract rotation (simplified - Y rotation only)
+    // Extract rotation 
     if (scale.x > 0.001f && scale.z > 0.001f) {
         float normalizedM00 = matrix.m[0] / scale.x;
         float normalizedM02 = matrix.m[2] / scale.x;

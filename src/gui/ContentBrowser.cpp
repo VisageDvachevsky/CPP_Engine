@@ -11,7 +11,6 @@ void ContentBrowser::show() {
     showPathBar();
     ImGui::Separator();
     
-    // Split view: directory tree on left, files on right
     if (ImGui::BeginTable("ContentBrowserTable", 2, ImGuiTableFlags_Resizable)) {
         ImGui::TableSetupColumn("Directories", ImGuiTableColumnFlags_WidthFixed, 200.0f);
         ImGui::TableSetupColumn("Files", ImGuiTableColumnFlags_WidthStretch);
@@ -33,7 +32,6 @@ void ContentBrowser::show() {
 }
 
 void ContentBrowser::showPathBar() {
-    // Navigation buttons
     if (ImGui::Button("< Back")) {
         // TODO: Navigate back
     }
@@ -82,7 +80,6 @@ void ContentBrowser::showFileGrid() {
                 if (entry.is_regular_file()) {
                     std::string filename = entry.path().filename().string();
                     
-                    // File icon based on extension
                     std::string ext = entry.path().extension().string();
                     const char* icon = "📄";
                     if (ext == ".frag" || ext == ".vert" || ext == ".glsl") icon = "🔧";

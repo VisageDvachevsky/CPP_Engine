@@ -70,9 +70,4 @@ private:
     
     // Input state
     bool m_firstMouse = true;
-};5.0f;
-    float m_mouseSensitivity = 0.1f;
-    
-    // Input state
-    bool m_firstMouse = true;
 };

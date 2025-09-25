@@ -33,6 +33,8 @@ public:
 private:
     void updateOrbitCamera(float dt);
     void updateFlyCamera(float dt);
+    void updateOrbitCameraPosition();    
+    void updateFlyCameraOrientation();   
     void handleMouseInput(float dt);
     void handleKeyboardInput(float dt);
     

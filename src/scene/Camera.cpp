@@ -12,7 +12,7 @@ Camera::Camera() {
 }
 
 void Camera::update(float dt) {
-    // Basic camera update - detailed control is handled by EditorCamera
+    // Basic camera update 
 }
 
 void Camera::reset() {
@@ -68,7 +68,6 @@ void Camera::lookAt(const Vec3& target) {
 }
 
 void Camera::updateVectors() {
-    // Convert spherical to cartesian coordinates
     float yawRad = m_yaw * M_PI / 180.0f;
     float pitchRad = m_pitch * M_PI / 180.0f;
     

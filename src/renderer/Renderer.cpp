@@ -18,7 +18,6 @@ Renderer::Renderer() {
     createQuad();
     createGrid();
     
-    // Load shaders
     m_pathTracerShader = std::make_unique<Shader>();
     if (!m_pathTracerShader->loadFromFiles("shaders/pathtracer.vert", "shaders/pathtracer.frag")) {
         LOG_ERROR("Failed to load path tracer shader");
@@ -99,7 +98,6 @@ void Renderer::createGrid() {
         gridVertices.insert(gridVertices.end(), {gridSize * gridSpacing, 0.0f, pos});
     }
     
-    // Generate indices
     for (unsigned int i = 0; i < gridVertices.size() / 3; ++i) {
         gridIndices.push_back(i);
     }
@@ -133,15 +131,12 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
         return;
     }
     
-    // Render grid first
     renderGrid(camera);
     
-    // Get viewport size
     Vec2 viewportSize = m_viewportSize;
     
     m_pathTracerShader->use();
     
-    // Camera uniforms
     Vec3 pos = camera.getPosition();
     Vec3 dir = camera.getDirection();
     Vec3 up = camera.getUp();
@@ -153,17 +148,14 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
     m_pathTracerShader->setVec3("u_cameraRight", right);
     m_pathTracerShader->setFloat("u_fov", camera.getFov());
     
-    // Resolution and time
     m_pathTracerShader->setVec3("u_resolution", Vec3(viewportSize.x, viewportSize.y, 0));
     m_pathTracerShader->setFloat("u_time", Time::getTime());
     
-    // Render settings
     m_pathTracerShader->setInt("u_maxBounces", m_maxBounces);
     m_pathTracerShader->setInt("u_samplesPerPixel", m_samplesPerPixel);
     
     updateUniforms(scene, camera);
     
-    // Render fullscreen quad
     glBindVertexArray(m_quadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
@@ -254,18 +246,136 @@ void Renderer::renderHoverOutline(const Object& object, const Camera& camera) {
 }
 
 void Renderer::renderObjectWireframe(const Object& object) {
-    // TODO: Implement proper wireframe rendering for different object types
-    // This would need actual mesh generation for spheres, cubes, etc.
     switch (object.getType()) {
-        case ObjectType::Sphere:
-            // Generate and render sphere wireframe mesh
+        case ObjectType::Sphere: {
+            const int segments = 16;
+            const int rings = 12;
+            
+            std::vector<Vec3> vertices;
+            std::vector<unsigned int> indices;
+            
+            for (int i = 0; i <= rings; ++i) {
+                float phi = M_PI * float(i) / float(rings);
+                for (int j = 0; j <= segments; ++j) {
+                    float theta = 2.0f * M_PI * float(j) / float(segments);
+                    
+                    float x = std::sin(phi) * std::cos(theta);
+                    float y = std::cos(phi);
+                    float z = std::sin(phi) * std::sin(theta);
+                    
+                    vertices.push_back(Vec3{x, y, z});
+                }
+            }
+            
+            // Generate indices for wireframe
+            for (int i = 0; i < rings; ++i) {
+                for (int j = 0; j < segments; ++j) {
+                    int curr = i * (segments + 1) + j;
+                    int next = curr + segments + 1;
+                    
+                    indices.push_back(curr);
+                    indices.push_back(curr + 1);
+                    
+                    indices.push_back(curr);
+                    indices.push_back(next);
+                }
+            }
+            
+            // Render wireframe
+            unsigned int vao, vbo, ibo;
+            glGenVertexArrays(1, &vao);
+            glGenBuffers(1, &vbo);
+            glGenBuffers(1, &ibo);
+            
+            glBindVertexArray(vao);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vec3), vertices.data(), GL_DYNAMIC_DRAW);
+            
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_DYNAMIC_DRAW);
+            
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), (void*)0);
+            glEnableVertexAttribArray(0);
+            
+            glDrawElements(GL_LINES, indices.size(), GL_UNSIGNED_INT, 0);
+            
+            glBindVertexArray(0);
+            glDeleteBuffers(1, &ibo);
+            glDeleteBuffers(1, &vbo);
+            glDeleteVertexArrays(1, &vao);
             break;
-        case ObjectType::Cube:
-            // Generate and render cube wireframe mesh
+        }
+        case ObjectType::Cube: {
+            // Cube wireframe vertices
+            Vec3 vertices[] = {
+                {-0.5f, -0.5f, -0.5f}, {0.5f, -0.5f, -0.5f},
+                {0.5f,  0.5f, -0.5f}, {-0.5f,  0.5f, -0.5f},
+                {-0.5f, -0.5f,  0.5f}, {0.5f, -0.5f,  0.5f},
+                {0.5f,  0.5f,  0.5f}, {-0.5f,  0.5f,  0.5f}
+            };
+            
+            unsigned int indices[] = {
+                0,1, 1,2, 2,3, 3,0,  // Front face
+                4,5, 5,6, 6,7, 7,4,  // Back face
+                0,4, 1,5, 2,6, 3,7   // Connecting edges
+            };
+            
+            // Render cube wireframe
+            unsigned int vao, vbo, ibo;
+            glGenVertexArrays(1, &vao);
+            glGenBuffers(1, &vbo);
+            glGenBuffers(1, &ibo);
+            
+            glBindVertexArray(vao);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+            
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_DYNAMIC_DRAW);
+            
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), (void*)0);
+            glEnableVertexAttribArray(0);
+            
+            glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+            
+            glBindVertexArray(0);
+            glDeleteBuffers(1, &ibo);
+            glDeleteBuffers(1, &vbo);
+            glDeleteVertexArrays(1, &vao);
             break;
-        case ObjectType::Plane:
-            // Generate and render plane wireframe mesh
+        }
+        case ObjectType::Plane: {
+            // Plane wireframe (grid pattern)
+            const int gridSize = 5;
+            std::vector<Vec3> vertices;
+            
+            for (int i = -gridSize; i <= gridSize; ++i) {
+                float t = float(i) / float(gridSize);
+                vertices.push_back(Vec3{-0.5f, 0, t * 0.5f});
+                vertices.push_back(Vec3{0.5f, 0, t * 0.5f});
+                vertices.push_back(Vec3{t * 0.5f, 0, -0.5f});
+                vertices.push_back(Vec3{t * 0.5f, 0, 0.5f});
+            }
+            
+            // Render plane wireframe
+            unsigned int vao, vbo;
+            glGenVertexArrays(1, &vao);
+            glGenBuffers(1, &vbo);
+            
+            glBindVertexArray(vao);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vec3), vertices.data(), GL_DYNAMIC_DRAW);
+            
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vec3), (void*)0);
+            glEnableVertexAttribArray(0);
+            
+            glDrawArrays(GL_LINES, 0, vertices.size());
+            
+            glBindVertexArray(0);
+            glDeleteBuffers(1, &vbo);
+            glDeleteVertexArrays(1, &vao);
             break;
+        }
     }
 }
 
@@ -281,7 +391,7 @@ void Renderer::updateUniforms(const Scene& scene, const Camera& camera) {
             
             Vec3 pos = obj->getTransform().position;
             Vec3 color = obj->getMaterial().color;
-            float radius = obj->getTransform().scale.x; // Use consistent API
+            float radius = obj->getTransform().scale.x;
             
             m_pathTracerShader->setVec3(base + ".center", pos);
             m_pathTracerShader->setFloat(base + ".radius", radius);
@@ -314,7 +424,7 @@ void Renderer::updateUniforms(const Scene& scene, const Camera& camera) {
 }
 
 void Renderer::updateStats() {
-    m_fps = Time::getFPS(); // Use consistent time API
+    m_fps = Time::getFPS();
 }
 
 void Renderer::reloadShaders() {

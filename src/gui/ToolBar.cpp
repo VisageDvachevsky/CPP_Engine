@@ -20,12 +20,12 @@ void ToolBar::show(Scene& scene, Camera& camera, Renderer& renderer) {
     
     showTransformTools();
     ImGui::SameLine();
-    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::TextDisabled(" | "); 
     ImGui::SameLine();
     
     showRenderSettings(renderer);
     ImGui::SameLine();
-    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::TextDisabled(" | ");
     ImGui::SameLine();
     
     showCameraControls(camera);

@@ -13,7 +13,7 @@ struct Material {
     MaterialType type = MaterialType::Diffuse;
     float roughness = 0.5f;
     float metalness = 0.0f;
-    float ior = 1.5f; // Index of refraction for dielectrics
+    float ior = 1.5f; 
     
     Material() = default;
     

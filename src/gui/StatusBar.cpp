@@ -19,19 +19,19 @@ void StatusBar::show(const Renderer& renderer) {
                 1000.0f / Time::getFPS());
     
     ImGui::SameLine();
-    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::Text("|"); 
     ImGui::SameLine();
     
     ImGui::Text("Draw Calls: %d", renderer.getDrawCalls());
     
     ImGui::SameLine();
-    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::Text("|"); 
     ImGui::SameLine();
     
     ImGui::Text("Frame: %d", Time::getFrameCount());
     
     ImGui::SameLine();
-    ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+    ImGui::Text("|"); 
     ImGui::SameLine();
     
     // Render settings

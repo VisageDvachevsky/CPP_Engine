@@ -4,6 +4,10 @@
 #include "math/Vec2.h"
 #include <memory>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 class Scene;
 class Camera;
 class Object;
@@ -38,16 +42,18 @@ public:
 
 private:
     void createQuad();
+    void createGrid();
     void updateUniforms(const Scene& scene, const Camera& camera);
     void updateStats();
     void renderGrid(const Camera& camera);
+    void renderObjectWireframe(const Object& object);
     
     std::unique_ptr<Shader> m_pathTracerShader;
     std::unique_ptr<Shader> m_wireframeShader;
     std::unique_ptr<Shader> m_gridShader;
     
-    unsigned int m_quadVAO, m_quadVBO;
-    unsigned int m_gridVAO, m_gridVBO, m_gridIBO;
+    unsigned int m_quadVAO = 0, m_quadVBO = 0;
+    unsigned int m_gridVAO = 0, m_gridVBO = 0, m_gridIBO = 0;
     
     // Viewport
     Vec2 m_viewportSize{1920, 1080};

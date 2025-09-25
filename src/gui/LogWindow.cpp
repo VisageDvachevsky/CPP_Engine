@@ -9,7 +9,6 @@
 void LogWindow::show() {
     ImGui::Begin("Logger");
     
-    // Controls
     ImGui::Checkbox("Auto-scroll", &m_autoScroll);
     ImGui::SameLine();
     
@@ -24,23 +23,19 @@ void LogWindow::show() {
     
     ImGui::Separator();
     
-    // Log entries
     if (ImGui::BeginChild("LogEntries")) {
         const auto& entries = Logger::getEntries();
         
         for (const auto& entry : entries) {
-            // Filter by level
             int entryLevel = static_cast<int>(entry.level);
             if (m_selectedLevel > 0 && entryLevel < m_selectedLevel) {
                 continue;
             }
             
-            // Format timestamp
             auto time_t = std::chrono::system_clock::to_time_t(entry.timestamp);
             std::stringstream ss;
             ss << std::put_time(std::localtime(&time_t), "%H:%M:%S");
             
-            // Color by level
             ImVec4 color;
             const char* levelStr;
             switch (entry.level) {

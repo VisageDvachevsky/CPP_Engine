@@ -16,7 +16,7 @@ public:
     std::shared_ptr<Shader> getShader(const std::string& name);
     void clearShaders();
     
-    // Texture management would go here
+    // Texture management 
     // unsigned int loadTexture(const std::string& path);
 
 private:

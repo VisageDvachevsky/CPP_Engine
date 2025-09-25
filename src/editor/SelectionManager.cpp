@@ -13,24 +13,20 @@ SelectionManager::SelectionManager(Scene& scene) : m_scene(scene) {
 }
 
 void SelectionManager::update() {
-    // Handle mouse selection when not over GUI
     if (!ImGui::GetIO().WantCaptureMouse) {
         if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
             // TODO: Implement mouse picking when viewport system is ready
-            // For now, this will be handled by the viewport
         }
     }
 }
 
 void SelectionManager::renderSelection(Renderer& renderer, Camera& camera) {
-    // Render selection outlines/wireframes
     for (Object* object : m_selectedObjects) {
         if (object) {
             renderer.renderSelectionOutline(*object, camera);
         }
     }
     
-    // Render hover outline
     if (m_hoveredObject && std::find(m_selectedObjects.begin(), m_selectedObjects.end(), m_hoveredObject) == m_selectedObjects.end()) {
         renderer.renderHoverOutline(*m_hoveredObject, camera);
     }
@@ -39,7 +35,6 @@ void SelectionManager::renderSelection(Renderer& renderer, Camera& camera) {
 void SelectionManager::selectObject(Object* object) {
     if (!object) return;
     
-    // Deselect all others
     for (Object* obj : m_selectedObjects) {
         if (obj) obj->setSelected(false);
     }
@@ -48,7 +43,6 @@ void SelectionManager::selectObject(Object* object) {
     m_selectedObjects.push_back(object);
     object->setSelected(true);
     
-    // Update scene selection
     m_scene.setSelectedObject(object);
 }
 
@@ -165,7 +159,6 @@ void SelectionManager::getSelectionBounds(Vec3& minBounds, Vec3& maxBounds) cons
         Vec3 pos = obj->getTransform().position;
         Vec3 scale = obj->getTransform().scale;
         
-        // Simple AABB calculation
         Vec3 objMin = pos - scale * 0.5f;
         Vec3 objMax = pos + scale * 0.5f;
         

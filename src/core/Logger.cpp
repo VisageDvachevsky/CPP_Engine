@@ -20,7 +20,6 @@ void Logger::log(LogLevel level, const std::string& message) {
     
     s_entries.push_back(entry);
     
-    // Console output
     const char* levelStr[] = {"DEBUG", "INFO", "WARN", "ERROR"};
     std::cout << "[" << levelStr[static_cast<int>(level)] << "] " << message << std::endl;
     

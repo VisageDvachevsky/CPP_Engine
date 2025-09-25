@@ -16,6 +16,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 #include <ImGuizmo.h>
+#include <GLFW/glfw3.h>
 
 GUI::GUI(Window& window, Editor& editor) : m_window(window), m_editor(editor) {
     IMGUI_CHECKVERSION();
@@ -25,14 +26,11 @@ GUI::GUI(Window& window, Editor& editor) : m_window(window), m_editor(editor) {
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     
-    // Setup Unreal Engine style
     setupUnrealStyle();
     
-    // Setup backends
     ImGui_ImplGlfw_InitForOpenGL(window.handle(), true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
     
-    // Create GUI panels
     m_viewport = std::make_unique<Viewport>(m_editor);
     m_sceneOutliner = std::make_unique<SceneOutliner>();
     m_detailsPanel = std::make_unique<DetailsPanel>();
@@ -129,7 +127,6 @@ void GUI::setupDockspace() {
     if (opt_fullscreen)
         ImGui::PopStyleVar(2);
     
-    // Submit the DockSpace
     ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
         ImGuiID dockspace_id = ImGui::GetID("MainDockSpace");
@@ -208,7 +205,6 @@ void GUI::setupUnrealStyle() {
     ImGuiStyle& style = ImGui::GetStyle();
     ImVec4* colors = style.Colors;
     
-    // Unreal Engine dark theme colors
     colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
     colors[ImGuiCol_WindowBg] = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);
@@ -287,187 +283,4 @@ void GUI::setupUnrealStyle() {
     style.GrabRounding = 3;
     style.LogSliderDeadzone = 4;
     style.TabRounding = 4;
-}#include "GUI.h"
-#include "Inspector.h"
-#include "LogWindow.h"
-#include "core/Window.h"
-#include "scene/Scene.h"
-#include "scene/Camera.h"
-#include "renderer/Renderer.h"
-
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
-
-GUI::GUI(const Window& window) {
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-    
-    // Setup style
-    ImGui::StyleColorsDark();
-    
-    // When viewports are enabled we tweak WindowRounding/WindowBg
-    ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
-    
-    // Setup backends
-    ImGui_ImplGlfw_InitForOpenGL(window.handle(), true);
-    ImGui_ImplOpenGL3_Init("#version 330 core");
-    
-    // Create GUI components
-    m_inspector = std::make_unique<Inspector>();
-    m_logWindow = std::make_unique<LogWindow>();
-}
-
-GUI::~GUI() {
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-}
-
-void GUI::newFrame() {
-    ImGui_ImplOpenGL3_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
-}
-
-void GUI::update(Scene& scene, Camera& camera, Renderer& renderer) {
-    setupDockspace();
-    showMenuBar(scene, camera, renderer);
-    
-    if (m_showStats) {
-        showStatsWindow(renderer);
-    }
-    
-    if (m_showInspector) {
-        m_inspector->show(scene);
-    }
-    
-    if (m_showLogger) {
-        m_logWindow->show();
-    }
-    
-    if (m_showDemo) {
-        ImGui::ShowDemoWindow(&m_showDemo);
-    }
-}
-
-void GUI::render() {
-    ImGui::Render();
-    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    
-    ImGuiIO& io = ImGui::GetIO();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-        GLFWwindow* backup_current_context = glfwGetCurrentContext();
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindowsDefault();
-        glfwMakeContextCurrent(backup_current_context);
-    }
-}
-
-void GUI::setupDockspace() {
-    static bool opt_fullscreen = true;
-    static bool opt_padding = false;
-    static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-    
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-    if (opt_fullscreen) {
-        const ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(viewport->WorkPos);
-        ImGui::SetNextWindowSize(viewport->WorkSize);
-        ImGui::SetNextWindowViewport(viewport->ID);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-    } else {
-        dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
-    }
-    
-    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-        window_flags |= ImGuiWindowFlags_NoBackground;
-    
-    if (!opt_padding)
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    
-    ImGui::Begin("DockSpace Demo", nullptr, window_flags);
-    
-    if (!opt_padding)
-        ImGui::PopStyleVar();
-    
-    if (opt_fullscreen)
-        ImGui::PopStyleVar(2);
-    
-    // Submit the DockSpace
-    ImGuiIO& io = ImGui::GetIO();
-    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-    }
-}
-
-void GUI::showMenuBar(Scene& scene, Camera& camera, Renderer& renderer) {
-    if (ImGui::BeginMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New Scene")) {
-                scene.getObjects().clear();
-            }
-            if (ImGui::MenuItem("Load Scene")) {
-                // TODO: Implement scene loading
-            }
-            if (ImGui::MenuItem("Save Scene")) {
-                // TODO: Implement scene saving
-            }
-            ImGui::Separator();
-            if (ImGui::MenuItem("Exit")) {
-                // TODO: Signal application exit
-            }
-            ImGui::EndMenu();
-        }
-        
-        if (ImGui::BeginMenu("View")) {
-            ImGui::MenuItem("Inspector", nullptr, &m_showInspector);
-            ImGui::MenuItem("Logger", nullptr, &m_showLogger);
-            ImGui::MenuItem("Stats", nullptr, &m_showStats);
-            ImGui::Separator();
-            ImGui::MenuItem("Demo Window", nullptr, &m_showDemo);
-            ImGui::EndMenu();
-        }
-        
-        if (ImGui::BeginMenu("Camera")) {
-            if (ImGui::MenuItem("Reset Camera")) {
-                camera.reset();
-            }
-            ImGui::EndMenu();
-        }
-        
-        ImGui::EndMenuBar();
-    }
-    
-    ImGui::End();
-}
-
-void GUI::showStatsWindow(const Renderer& renderer) {
-    ImGui::Begin("Statistics", &m_showStats);
-    
-    ImGui::Text("Renderer Stats");
-    ImGui::Separator();
-    ImGui::Text("FPS: %.1f", renderer.getFPS());
-    ImGui::Text("Frame Time: %.3f ms", 1000.0f / renderer.getFPS());
-    ImGui::Text("Draw Calls: %d", renderer.getDrawCalls());
-    
-    ImGui::Spacing();
-    ImGui::Text("Path Tracer Settings");
-    ImGui::Separator();
-    ImGui::Text("Samples per Pixel: %d", renderer.getSamplesPerPixel());
-    ImGui::Text("Max Bounces: %d", renderer.getMaxBounces());
-    
-    ImGui::End();
 }

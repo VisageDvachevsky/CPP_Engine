@@ -20,7 +20,6 @@ void EditorCamera::update(float dt, bool isViewportFocused) {
             updateFlyCamera(dt);
             break;
         case CameraMode::Focus:
-            // Focus mode is handled by specific focus functions
             break;
     }
 }
@@ -39,7 +38,6 @@ void EditorCamera::updateOrbitCamera(float dt) {
         m_orbitYaw += mouseDelta.x * m_mouseSensitivity;
         m_orbitPitch -= mouseDelta.y * m_mouseSensitivity;
         
-        // Constrain pitch
         m_orbitPitch = std::clamp(m_orbitPitch, -89.0f, 89.0f);
     } else if (m_isRotating) {
         m_isRotating = false;
@@ -52,7 +50,6 @@ void EditorCamera::updateOrbitCamera(float dt) {
             m_isPanning = true;
         }
         
-        // Convert mouse delta to world space movement
         Vec3 right = m_camera.getRight();
         Vec3 up = m_camera.getUp();
         
@@ -69,7 +66,6 @@ void EditorCamera::updateOrbitCamera(float dt) {
         m_orbitDistance = std::max(0.1f, m_orbitDistance);
     }
     
-    // Update camera position based on orbit parameters
     updateOrbitCameraPosition();
 }
 
@@ -101,7 +97,6 @@ void EditorCamera::updateFlyCamera(float dt) {
         if (Input::isKeyHeld(GLFW_KEY_E)) movement += up;
         if (Input::isKeyHeld(GLFW_KEY_Q)) movement -= up;
         
-        // Speed modifiers
         float speed = m_movementSpeed;
         if (Input::isKeyHeld(GLFW_KEY_LEFT_SHIFT)) speed *= 3.0f;
         if (Input::isKeyHeld(GLFW_KEY_LEFT_CONTROL)) speed *= 0.3f;
@@ -112,7 +107,6 @@ void EditorCamera::updateFlyCamera(float dt) {
             m_camera.setPosition(currentPos + movement * speed * dt);
         }
         
-        // Update camera orientation
         updateFlyCameraOrientation();
     } else if (m_isRotating) {
         m_isRotating = false;
@@ -121,7 +115,6 @@ void EditorCamera::updateFlyCamera(float dt) {
 }
 
 void EditorCamera::updateOrbitCameraPosition() {
-    // Convert spherical coordinates to cartesian
     float yawRad = m_orbitYaw * (3.14159f / 180.0f);
     float pitchRad = m_orbitPitch * (3.14159f / 180.0f);
     

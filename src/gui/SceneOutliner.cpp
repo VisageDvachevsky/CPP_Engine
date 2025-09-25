@@ -9,21 +9,18 @@
 void SceneOutliner::show(Scene& scene) {
     ImGui::Begin("Scene Outliner");
     
-    // Header with create button
     if (ImGui::Button("Create")) {
         m_showCreateMenu = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Refresh")) {
-        // Refresh scene hierarchy
+        // Refresh scene hierarchy 
     }
     
     ImGui::Separator();
     
-    // Show object hierarchy
     showObjectHierarchy(scene);
     
-    // Handle object creation menu
     if (m_showCreateMenu) {
         handleObjectCreation(scene);
     }
@@ -52,12 +49,11 @@ void SceneOutliner::showObjectHierarchy(Scene& scene) {
                 flags |= ImGuiTreeNodeFlags_Selected;
             }
             
-            // Object icon based on type
-            const char* icon = "🟡"; // Default
+            const char* icon = "○"; // Default
             switch (obj->getType()) {
-                case ObjectType::Sphere: icon = "🔵"; break;
-                case ObjectType::Plane: icon = "⬜"; break;
-                case ObjectType::Cube: icon = "🟦"; break;
+                case ObjectType::Sphere: icon = "●"; break;
+                case ObjectType::Plane: icon = "▭"; break;
+                case ObjectType::Cube: icon = "■"; break;
             }
             
             std::string label = std::string(icon) + " " + obj->getName();
@@ -74,7 +70,6 @@ void SceneOutliner::showObjectHierarchy(Scene& scene) {
                 ImGui::EndDragDropSource();
             }
             
-            // Context menu for individual objects
             if (ImGui::BeginPopupContextItem()) {
                 ImGui::Text("Object: %s", obj->getName().c_str());
                 ImGui::Separator();

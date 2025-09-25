@@ -1,9 +1,10 @@
 #include "Window.h"
 #include "Logger.h"
 
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include <stdexcept>
+
 
 Window::Window(int width, int height, const std::string& title)
     : m_width(width), m_height(height), m_title(title) {

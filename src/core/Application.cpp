@@ -27,23 +27,18 @@ Application::~Application() {
 void Application::init() {
     LOG_INFO("Initializing MiniGPU Engine...");
     
-    // Core systems
     m_window = std::make_unique<Window>(1920, 1080, "MiniGPU Engine - Unreal Style Editor");
     m_renderer = std::make_unique<Renderer>();
     m_scene = std::make_unique<Scene>();
     m_camera = std::make_unique<Camera>();
     
-    // Editor system
     m_editor = std::make_unique<Editor>(*m_window, *m_renderer, *m_scene, *m_camera);
     
-    // File watcher for hot reload
     m_fileWatcher = std::make_unique<FileWatcher>("shaders");
     m_fileWatcher->setCallback([this](const std::string& path) {
         LOG_INFO("Shader changed: {}", path);
         m_renderer->reloadShaders();
     });
-    
-    // Setup default scene
     m_scene->createDefaultScene();
     m_camera->setPosition({5, 5, 5});
     m_camera->lookAt({0, 0, 0});
