@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "Material.h"
 #include "core/Logger.h"
+#include "utils/Random.h"
 
 Scene::Scene() {
     LOG_INFO("Scene created");
@@ -18,7 +19,7 @@ void Scene::createDefaultScene() {
     // Center sphere - metallic with some roughness
     auto centerSphere = std::make_unique<Object>("Metal Sphere", ObjectType::Sphere);
     centerSphere->getTransform().position = {0, 1, 0};
-    centerSphere->setScale({1, 1, 1});
+    centerSphere->getTransform().scale = {1, 1, 1};
     centerSphere->getMaterial().color = {0.7f, 0.6f, 0.5f};
     centerSphere->getMaterial().type = MaterialType::Metal;
     centerSphere->getMaterial().roughness = 0.1f;
@@ -28,7 +29,7 @@ void Scene::createDefaultScene() {
     // Left sphere - diffuse
     auto leftSphere = std::make_unique<Object>("Diffuse Sphere", ObjectType::Sphere);
     leftSphere->getTransform().position = {-2, 1, 0};
-    leftSphere->setScale({1, 1, 1});
+    leftSphere->getTransform().scale = {1, 1, 1};
     leftSphere->getMaterial().color = {0.1f, 0.2f, 0.5f};
     leftSphere->getMaterial().type = MaterialType::Diffuse;
     leftSphere->getMaterial().roughness = 1.0f;
@@ -37,16 +38,32 @@ void Scene::createDefaultScene() {
     // Right sphere - glass
     auto rightSphere = std::make_unique<Object>("Glass Sphere", ObjectType::Sphere);
     rightSphere->getTransform().position = {2, 1, 0};
-    rightSphere->setScale({1, 1, 1});
+    rightSphere->getTransform().scale = {1, 1, 1};
     rightSphere->getMaterial().color = {1.0f, 1.0f, 1.0f};
     rightSphere->getMaterial().type = MaterialType::Dielectric;
     rightSphere->getMaterial().ior = 1.5f;
     addObject(std::move(rightSphere));
     
+    // Cube
+    auto cube = std::make_unique<Object>("Cube", ObjectType::Cube);
+    cube->getTransform().position = {0, 1.5f, 3.0f};
+    cube->getTransform().scale = {1.5f, 1.5f, 1.5f};
+    cube->getMaterial().color = {0.3f, 0.5f, 0.7f};
+    cube->getMaterial().type = MaterialType::Diffuse;
+    addObject(std::move(cube));
+    
+    // Floor plane
+    auto plane = std::make_unique<Object>("Floor", ObjectType::Plane);
+    plane->getTransform().position = {0, 0, 0};
+    plane->getTransform().scale = {20, 1, 20};
+    plane->getMaterial().color = {0.8f, 0.8f, 0.8f};
+    plane->getMaterial().type = MaterialType::Diffuse;
+    addObject(std::move(plane));
+    
     // Small sphere - emissive light source
     auto lightSphere = std::make_unique<Object>("Light Sphere", ObjectType::Sphere);
     lightSphere->getTransform().position = {0, 4, 1};
-    lightSphere->setScale({0.5f, 0.5f, 0.5f});
+    lightSphere->getTransform().scale = {0.5f, 0.5f, 0.5f};
     lightSphere->getMaterial().color = {1.0f, 1.0f, 1.0f};
     lightSphere->getMaterial().type = MaterialType::Diffuse;
     lightSphere->getMaterial().emission = {5.0f, 4.5f, 4.0f}; // Bright white-yellowish light
@@ -55,7 +72,7 @@ void Scene::createDefaultScene() {
     // Small blue emissive sphere
     auto blueLightSphere = std::make_unique<Object>("Blue Light", ObjectType::Sphere);
     blueLightSphere->getTransform().position = {-3, 0.5f, 2};
-    blueLightSphere->setScale({0.3f, 0.3f, 0.3f});
+    blueLightSphere->getTransform().scale = {0.3f, 0.3f, 0.3f};
     blueLightSphere->getMaterial().color = {0.2f, 0.3f, 1.0f};
     blueLightSphere->getMaterial().type = MaterialType::Diffuse;
     blueLightSphere->getMaterial().emission = {0.0f, 1.0f, 5.0f}; // Blue light
@@ -74,6 +91,9 @@ void Scene::removeObject(int index) {
             m_selectedObject = nullptr;
         }
         m_objects.erase(m_objects.begin() + index);
+        LOG_DEBUG("Object at index {} removed", index);
+    } else {
+        LOG_WARN("Attempted to remove object with invalid index: {}", index);
     }
 }
 
@@ -86,4 +106,65 @@ int Scene::getSelectedIndex() const {
         }
     }
     return -1;
+}
+
+int Scene::getObjectIndex(const Object* object) const {
+    if (!object) return -1;
+    
+    for (int i = 0; i < static_cast<int>(m_objects.size()); ++i) {
+        if (m_objects[i].get() == object) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+Object* Scene::getObjectByName(const std::string& name) {
+    for (auto& object : m_objects) {
+        if (object->getName() == name) {
+            return object.get();
+        }
+    }
+    return nullptr;
+}
+
+void Scene::clear() {
+    m_objects.clear();
+    m_selectedObject = nullptr;
+    LOG_INFO("Scene cleared");
+}
+
+void Scene::saveToDisk(const std::string& filePath) {
+    // TODO: Implement scene serialization to JSON or binary format
+    LOG_INFO("Scene saved to '{}'", filePath);
+}
+
+bool Scene::loadFromDisk(const std::string& filePath) {
+    // TODO: Implement scene loading from file
+    LOG_INFO("Scene loaded from '{}'", filePath);
+    return true;
+}
+
+std::unique_ptr<Scene> Scene::createEmptyScene() {
+    auto scene = std::make_unique<Scene>();
+    
+    // Add a default floor plane
+    auto plane = std::make_unique<Object>("Floor", ObjectType::Plane);
+    plane->getTransform().position = {0, 0, 0};
+    plane->getTransform().scale = {20, 1, 20};
+    plane->getMaterial().color = {0.8f, 0.8f, 0.8f};
+    plane->getMaterial().type = MaterialType::Diffuse;
+    scene->addObject(std::move(plane));
+    
+    // Add a light source
+    auto light = std::make_unique<Object>("Light", ObjectType::Sphere);
+    light->getTransform().position = {0, 5, 0};
+    light->getTransform().scale = {0.5f, 0.5f, 0.5f};
+    light->getMaterial().color = {1.0f, 1.0f, 1.0f};
+    light->getMaterial().emission = {5.0f, 5.0f, 5.0f};
+    scene->addObject(std::move(light));
+    
+    LOG_INFO("Empty scene created with default floor and light");
+    
+    return scene;
 }

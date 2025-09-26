@@ -15,11 +15,7 @@ SelectionManager::SelectionManager(Scene& scene) : m_scene(scene) {
 
 void SelectionManager::update() {
     if (ImGui::GetIO().WantCaptureMouse) {
-        return; 
-    }
-    
-    if (Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT)) {
-        LOG_INFO("SelectionManager: Detected double click");
+        return;
     }
 }
 
@@ -41,22 +37,22 @@ void SelectionManager::selectObject(Object* object) {
         return;
     }
     
-    // Сначала снимаем выделение со всех объектов
+    // First deselect all objects
     for (Object* obj : m_selectedObjects) {
         if (obj) {
             obj->setSelected(false);
         }
     }
     
-    // Очищаем список и добавляем новый объект
+    // Clear list and add new object
     m_selectedObjects.clear();
     m_selectedObjects.push_back(object);
     object->setSelected(true);
     
-    // Устанавливаем выбранный объект в сцене (это важно!)
+    // Set selected object in scene (important!)
     m_scene.setSelectedObject(object);
     
-    LOG_INFO("SelectionManager: Object '{}' selected", object->getName());
+    LOG_INFO("Object '{}' selected", object->getName());
 }
 
 void SelectionManager::deselectAll() {
@@ -97,7 +93,7 @@ Object* SelectionManager::pickObject(const Ray& ray) {
     Object* closestObject = nullptr;
     
     const auto& objects = m_scene.getObjects();
-    LOG_DEBUG("SelectionManager: Ray picking, checking {} objects", objects.size());
+    LOG_DEBUG("Ray picking, checking {} objects", objects.size());
     
     for (const auto& obj : objects) {
         float distance;
@@ -108,12 +104,12 @@ Object* SelectionManager::pickObject(const Ray& ray) {
         
         switch (obj->getType()) {
             case ObjectType::Sphere: {
-                float radius = scale.x; // Assuming uniform scale
+                float radius = scale.x;
                 hit = rayIntersectSphere(ray, position, radius, distance);
                 break;
             }
             case ObjectType::Plane: {
-                Vec3 normal{0, 1, 0}; // Default plane normal
+                Vec3 normal{0, 1, 0};
                 hit = rayIntersectPlane(ray, position, normal, distance);
                 break;
             }
@@ -129,6 +125,7 @@ Object* SelectionManager::pickObject(const Ray& ray) {
         if (hit && distance < closestDistance && distance > 0.001f) {
             closestDistance = distance;
             closestObject = obj.get();
+            LOG_DEBUG("Hit object '{}' at distance {}", obj->getName(), distance);
         }
     }
     
@@ -136,34 +133,43 @@ Object* SelectionManager::pickObject(const Ray& ray) {
 }
 
 void SelectionManager::handleMousePicking(const Vec2& mousePos, const Camera& camera) {
-    // Создаем луч из точки экрана
     Ray ray = camera.screenPointToRay(mousePos);
     Object* hitObject = pickObject(ray);
     
-    // Проверяем, был ли это двойной клик
     bool isDoubleClick = Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT);
     
-    // Логируем результаты
     if (hitObject) {
-        LOG_INFO("SelectionManager: Ray hit object '{}'", hitObject->getName());
+        LOG_INFO("Ray hit object '{}'", hitObject->getName());
         
         if (isDoubleClick) {
-            LOG_INFO("SelectionManager: Double click on object '{}'", hitObject->getName());
+            LOG_INFO("Double click on object '{}'", hitObject->getName());
+            
+            // Always select on double click
+            selectObject(hitObject);
+            
+            // Focus camera on double-clicked object
+            if (m_objectFocusCallback) {
+                Vec3 position = hitObject->getTransform().position;
+                float radius = hitObject->getTransform().scale.x;
+                LOG_INFO("Focusing camera on object '{}'", hitObject->getName());
+                m_objectFocusCallback(position, radius);
+            }
+            
+            // Activate transform gizmo (this will be picked up by Editor)
+            if (m_activateGizmoCallback) {
+                m_activateGizmoCallback();
+            }
+        } else {
+            // Single click just selects the object
+            selectObject(hitObject);
         }
     } else {
-        LOG_INFO("SelectionManager: Ray did not hit any object");
-        return; // Если ничего не попало, выходим
-    }
-    
-    // Выбираем объект
-    selectObject(hitObject);
-    
-    // Если это двойной клик, фокусируем камеру на объекте
-    if (isDoubleClick && m_objectFocusCallback) {
-        Vec3 position = hitObject->getTransform().position;
-        float radius = hitObject->getTransform().scale.x;
-        LOG_INFO("SelectionManager: Focusing camera on object '{}'", hitObject->getName());
-        m_objectFocusCallback(position, radius);
+        LOG_INFO("Ray did not hit any object");
+        
+        // On single click in empty space, deselect all
+        if (!isDoubleClick) {
+            deselectAll();
+        }
     }
 }
 
@@ -208,7 +214,7 @@ bool SelectionManager::rayIntersectSphere(const Ray& ray, const Vec3& center, fl
     float t1 = (-b - sqrtD) / (2.0f * a);
     float t2 = (-b + sqrtD) / (2.0f * a);
     
-    // Берем ближайшее положительное пересечение
+    // Use nearest positive intersection
     if (t1 > 0.001f) {
         distance = t1;
         return true;
@@ -239,8 +245,8 @@ bool SelectionManager::rayIntersectAABB(const Ray& ray, const Vec3& minBounds, c
     Vec3 tMin = Vec3{std::min(t1.x, t2.x), std::min(t1.y, t2.y), std::min(t1.z, t2.z)};
     Vec3 tMax = Vec3{std::max(t1.x, t2.x), std::max(t1.y, t2.y), std::max(t1.z, t2.z)};
     
-    float tNear = std::max({tMin.x, tMin.y, tMin.z});
-    float tFar = std::min({tMax.x, tMax.y, tMax.z});
+    float tNear = std::max(std::max(tMin.x, tMin.y), tMin.z);
+    float tFar = std::min(std::min(tMax.x, tMax.y), tMax.z);
     
     if (tNear > tFar || tFar < 0) return false;
     

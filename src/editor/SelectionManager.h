@@ -1,4 +1,3 @@
-// src/editor/SelectionManager.h
 #pragma once
 
 #include "math/Vec2.h"
@@ -13,8 +12,9 @@ class Object;
 class Camera;
 class Renderer;
 
-// Определяем тип колбэка для фокусировки на объекте
+// Callback types
 using ObjectFocusCallback = std::function<void(const Vec3& position, float radius)>;
+using GizmoActivateCallback = std::function<void()>;
 
 struct SelectionInfo {
     Object* object = nullptr;
@@ -30,28 +30,30 @@ public:
     void update();
     void renderSelection(Renderer& renderer, Camera& camera);
     
-    // Метод для установки колбэка фокусировки
+    // Callback setters
     void setObjectFocusCallback(const ObjectFocusCallback& callback) { m_objectFocusCallback = callback; }
+    void setGizmoActivateCallback(const GizmoActivateCallback& callback) { m_activateGizmoCallback = callback; }
     
-    // Методы выбора
+    // Selection methods
     void selectObject(Object* object);
     void deselectAll();
     void addToSelection(Object* object);
     void removeFromSelection(Object* object);
     
-    // Запросы
+    // Queries
     bool hasSelection() const { return !m_selectedObjects.empty(); }
     Object* getSelectedObject() const;
     const std::vector<Object*>& getSelectedObjects() const { return m_selectedObjects; }
     
-    // Выбор мышью
+    // Mouse picking
     Object* pickObject(const Ray& ray);
     void handleMousePicking(const Vec2& mousePos, const Camera& camera);
     
-    // Вычисление границ
+    // Bounds calculation
     void getSelectionBounds(Vec3& minBounds, Vec3& maxBounds) const;
 
 private:
+    // Ray intersection helpers
     bool rayIntersectSphere(const Ray& ray, const Vec3& center, float radius, float& distance);
     bool rayIntersectPlane(const Ray& ray, const Vec3& point, const Vec3& normal, float& distance);
     bool rayIntersectAABB(const Ray& ray, const Vec3& minBounds, const Vec3& maxBounds, float& distance);
@@ -60,6 +62,7 @@ private:
     std::vector<Object*> m_selectedObjects;
     Object* m_hoveredObject = nullptr;
     
-    // Колбэк для фокусировки камеры на объекте
+    // Callbacks
     ObjectFocusCallback m_objectFocusCallback;
+    GizmoActivateCallback m_activateGizmoCallback;
 };

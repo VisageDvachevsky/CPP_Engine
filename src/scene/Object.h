@@ -1,28 +1,33 @@
 #pragma once
 
 #include "Material.h"
-#include "math/Vec3.h"
+#include "Transform.h"
 #include <string>
+#include <memory>
 
 enum class ObjectType {
     Sphere,
     Plane,
-    Cube
+    Cube,
+    Mesh  // For future expansion
 };
 
-struct Transform {
-    Vec3 position{0, 0, 0};
-    Vec3 rotation{0, 0, 0};
-    Vec3 scale{1, 1, 1};
-};
+// Forward declarations
+class ShaderProgram;
+class Renderer;
 
 class Object {
 public:
     Object(const std::string& name, ObjectType type);
-    ~Object() = default;
+    virtual ~Object() = default;
     
-    void update(float dt);
+    virtual void update(float dt);
+    virtual void render(Renderer& renderer) const;
     
+    // Geometry data access for ray tracing
+    virtual void getIntersectionData(struct IntersectionData& data) const;
+    
+    // Accessors
     const std::string& getName() const { return m_name; }
     void setName(const std::string& name) { m_name = name; }
     
@@ -39,6 +44,10 @@ public:
     
     bool isSelected() const { return m_selected; }
     void setSelected(bool selected) { m_selected = selected; }
+    
+    // For editor visibility
+    bool isVisible() const { return m_visible; }
+    void setVisible(bool visible) { m_visible = visible; }
 
 private:
     std::string m_name;
@@ -46,4 +55,25 @@ private:
     Transform m_transform;
     Material m_material;
     bool m_selected = false;
+    bool m_visible = true;
+};
+
+// Structure for passing primitive data to shaders/ray tracing
+struct IntersectionData {
+    ObjectType type;
+    Vec3 position;
+    Vec3 scale;
+    Vec3 color;
+    int materialType;
+    float roughness;
+    float ior;
+    float metalness;
+    Vec3 emission;
+    Vec3 normal; // For planes
+    
+    // For meshes
+    unsigned int vertexCount = 0;
+    const float* vertices = nullptr;
+    unsigned int indexCount = 0;
+    const unsigned int* indices = nullptr;
 };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include "math/Vec3.h"
 
 class Window;
 class Renderer;
@@ -11,10 +12,12 @@ class SelectionManager;
 class TransformGizmo;
 class GUI;
 
+enum class ObjectType;
+
 enum class EditorMode {
-    Object,
-    Edit,
-    Play
+    Object,  // Default mode for object selection and basic transforms
+    Edit,    // Edit mode with advanced transform gizmo controls
+    Play     // Game simulation mode
 };
 
 class Editor {
@@ -27,16 +30,34 @@ public:
     
     void onWindowResize(int width, int height);
     
+    // Mode management
     EditorMode getMode() const { return m_mode; }
-    void setMode(EditorMode mode) { m_mode = mode; }
+    void setMode(EditorMode mode);
     
+    // Component access
     SelectionManager& getSelection() { return *m_selectionManager; }
     TransformGizmo& getGizmo() { return *m_transformGizmo; }
+    Renderer& getRenderer();
+    
+    // Gizmo control
+    void activateGizmo();
+    void deactivateGizmo();
+    bool isGizmoActive() const { return m_gizmoActive; }
+    
+    // Object creation and manipulation
+    void createPrimitive(ObjectType type);
+    void deleteSelectedObject();
+    void duplicateSelectedObject();
+    void focusOnSelectedObject();
 
 private:
     void initializeEditor();
     void updateEditor(float dt);
     void renderEditor();
+    void processShortcuts();
+    
+    // Utility functions
+    Vec3 generateRandomColor();
     
     Window& m_window;
     Renderer& m_renderer;
@@ -51,4 +72,5 @@ private:
     EditorMode m_mode = EditorMode::Object;
     bool m_isViewportFocused = false;
     bool m_isViewportHovered = false;
+    bool m_gizmoActive = false;
 };

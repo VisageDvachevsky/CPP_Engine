@@ -3,6 +3,7 @@
 #include "Shader.h"
 #include "math/Vec2.h"
 #include <memory>
+#include <vector>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -11,6 +12,7 @@
 class Scene;
 class Camera;
 class Object;
+struct IntersectionData;
 
 class Renderer {
 public:
@@ -41,17 +43,32 @@ public:
     void renderHoverOutline(const Object& object, const Camera& camera);
 
 private:
+    // Initialization
     void createQuad();
     void createGrid();
-    void updateUniforms(const Scene& scene, const Camera& camera);
-    void updateStats();
+    
+    // Rendering helpers
+    void updateSceneDataForShader(const Scene& scene);
     void renderGrid(const Camera& camera);
+    void updateStats();
+    
+    // Wireframe rendering
     void renderObjectWireframe(const Object& object);
+    void renderSphereWireframe();
+    void renderCubeWireframe();
+    void renderPlaneWireframe();
     
-    std::unique_ptr<Shader> m_pathTracerShader;
-    std::unique_ptr<Shader> m_wireframeShader;
-    std::unique_ptr<Shader> m_gridShader;
+    // Shaders
+    std::shared_ptr<Shader> m_pathTracerShader;
+    std::shared_ptr<Shader> m_wireframeShader;
+    std::shared_ptr<Shader> m_gridShader;
     
+    // Scene data for shader
+    std::vector<IntersectionData> m_sphereData;
+    std::vector<IntersectionData> m_planeData;
+    std::vector<IntersectionData> m_cubeData;
+    
+    // Geometry
     unsigned int m_quadVAO = 0, m_quadVBO = 0;
     unsigned int m_gridVAO = 0, m_gridVBO = 0, m_gridIBO = 0;
     

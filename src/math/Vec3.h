@@ -20,6 +20,17 @@ struct Vec3 {
     Vec3& operator-=(const Vec3& v) { x -= v.x; y -= v.y; z -= v.z; return *this; }
     Vec3& operator*=(float s) { x *= s; y *= s; z *= s; return *this; }
     
+    // Comparison operators
+    bool operator==(const Vec3& v) const { 
+        return std::abs(x - v.x) < 0.0001f && 
+               std::abs(y - v.y) < 0.0001f && 
+               std::abs(z - v.z) < 0.0001f; 
+    }
+    
+    bool operator!=(const Vec3& v) const { 
+        return !(*this == v); 
+    }
+    
     float length() const { return std::sqrt(x * x + y * y + z * z); }
     float lengthSq() const { return x * x + y * y + z * z; }
     
@@ -37,6 +48,15 @@ struct Vec3 {
     
     float* data() { return &x; }
     const float* data() const { return &x; }
+    
+    // Array-like access for components
+    float& operator[](int index) { 
+        return (&x)[index]; 
+    }
+    
+    const float& operator[](int index) const { 
+        return (&x)[index]; 
+    }
 };
 
 // Global operators for scalar * vector

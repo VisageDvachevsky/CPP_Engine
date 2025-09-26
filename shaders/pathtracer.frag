@@ -14,8 +14,8 @@ uniform int u_maxBounces;
 uniform int u_samplesPerPixel;
 uniform float u_time;
 
-#define MAX_SPHERES 16
-#define MAX_PLANES 4
+// Dynamic object counts
+#define MAX_PRIMITIVES 64
 #define PI 3.14159265359
 #define EPSILON 0.001
 
@@ -27,7 +27,7 @@ struct Sphere {
     float roughness;
     float ior;
     float metalness;
-    vec3 emission; // For emissive materials
+    vec3 emission;
 };
 
 struct Plane {
@@ -40,10 +40,25 @@ struct Plane {
     vec3 emission;
 };
 
-uniform Sphere u_spheres[MAX_SPHERES];
-uniform Plane u_planes[MAX_PLANES];
+struct Cube {
+    vec3 center;
+    vec3 size;
+    vec3 color;
+    int materialType;
+    float roughness;
+    float ior;
+    float metalness;
+    vec3 emission;
+};
+
+// Dynamic arrays of primitives
+uniform Sphere u_spheres[MAX_PRIMITIVES];
+uniform Plane u_planes[MAX_PRIMITIVES];
+uniform Cube u_cubes[MAX_PRIMITIVES];
+
 uniform int u_numSpheres;
 uniform int u_numPlanes;
+uniform int u_numCubes;
 
 struct Ray {
     vec3 origin;
@@ -148,6 +163,7 @@ vec3 importanceSampleGGX(vec2 Xi, float roughness, vec3 N) {
     return tangent * H.x + bitangent * H.y + N * H.z;
 }
 
+// Ray-sphere intersection
 bool intersectSphere(Ray ray, Sphere sphere, out float t) {
     vec3 oc = ray.origin - sphere.center;
     float a = dot(ray.direction, ray.direction);
@@ -174,6 +190,7 @@ bool intersectSphere(Ray ray, Sphere sphere, out float t) {
     return false;
 }
 
+// Ray-plane intersection
 bool intersectPlane(Ray ray, Plane plane, out float t) {
     float denom = dot(plane.normal, ray.direction);
     if (abs(denom) < EPSILON) return false;
@@ -182,11 +199,51 @@ bool intersectPlane(Ray ray, Plane plane, out float t) {
     return t > EPSILON;
 }
 
+// Ray-AABB (cube) intersection
+bool intersectCube(Ray ray, Cube cube, out float t, out vec3 normal) {
+    vec3 halfSize = cube.size * 0.5;
+    vec3 min = cube.center - halfSize;
+    vec3 max = cube.center + halfSize;
+    
+    vec3 invDir = 1.0 / ray.direction;
+    
+    vec3 t1 = (min - ray.origin) * invDir;
+    vec3 t2 = (max - ray.origin) * invDir;
+    
+    vec3 tmin = min(t1, t2);
+    vec3 tmax = max(t1, t2);
+    
+    float tNear = max(max(tmin.x, tmin.y), tmin.z);
+    float tFar = min(min(tmax.x, tmax.y), tmax.z);
+    
+    if (tNear > tFar || tFar < 0.0) return false;
+    
+    t = tNear > EPSILON ? tNear : tFar;
+    
+    // Calculate the normal based on which face was hit
+    vec3 hitPoint = ray.origin + ray.direction * t;
+    vec3 center = cube.center;
+    vec3 d = normalize(hitPoint - center);
+    vec3 absD = abs(d);
+    
+    // Find the dominant axis to determine which face was hit
+    if (absD.x > absD.y && absD.x > absD.z) {
+        normal = vec3(sign(d.x), 0.0, 0.0);
+    } else if (absD.y > absD.x && absD.y > absD.z) {
+        normal = vec3(0.0, sign(d.y), 0.0);
+    } else {
+        normal = vec3(0.0, 0.0, sign(d.z));
+    }
+    
+    return true;
+}
+
 HitInfo intersectScene(Ray ray) {
     HitInfo closestHit;
     closestHit.hit = false;
     closestHit.t = 1e30;
     
+    // Intersect with spheres
     for (int i = 0; i < u_numSpheres; i++) {
         float t;
         if (intersectSphere(ray, u_spheres[i], t) && t < closestHit.t) {
@@ -203,6 +260,7 @@ HitInfo intersectScene(Ray ray) {
         }
     }
     
+    // Intersect with planes
     for (int i = 0; i < u_numPlanes; i++) {
         float t;
         if (intersectPlane(ray, u_planes[i], t) && t < closestHit.t) {
@@ -213,8 +271,27 @@ HitInfo intersectScene(Ray ray) {
             closestHit.color = u_planes[i].color;
             closestHit.materialType = u_planes[i].materialType;
             closestHit.roughness = u_planes[i].roughness;
+            closestHit.ior = 1.0; // Planes don't use IOR
             closestHit.metalness = u_planes[i].metalness;
             closestHit.emission = u_planes[i].emission;
+        }
+    }
+    
+    // Intersect with cubes
+    for (int i = 0; i < u_numCubes; i++) {
+        float t;
+        vec3 normal;
+        if (intersectCube(ray, u_cubes[i], t, normal) && t < closestHit.t) {
+            closestHit.hit = true;
+            closestHit.t = t;
+            closestHit.point = ray.origin + t * ray.direction;
+            closestHit.normal = normal;
+            closestHit.color = u_cubes[i].color;
+            closestHit.materialType = u_cubes[i].materialType;
+            closestHit.roughness = u_cubes[i].roughness;
+            closestHit.ior = u_cubes[i].ior;
+            closestHit.metalness = u_cubes[i].metalness;
+            closestHit.emission = u_cubes[i].emission;
         }
     }
     
@@ -230,7 +307,6 @@ bool scatter(Ray inRay, HitInfo hit, out vec3 attenuation, out Ray scattered, ou
     emission = hit.emission;
     
     if (hit.materialType == 0) { // Diffuse
-        // Pure Lambertian scatter
         vec3 target = hit.point + hit.normal + randomUnitVector();
         scattered = Ray(hit.point, normalize(target - hit.point));
         attenuation = hit.color;
@@ -239,7 +315,6 @@ bool scatter(Ray inRay, HitInfo hit, out vec3 attenuation, out Ray scattered, ou
     else if (hit.materialType == 1) { // Metal
         vec3 reflected = reflect(normalize(inRay.direction), hit.normal);
         
-        // Apply roughness
         if (hit.roughness > 0.0) {
             reflected += hit.roughness * randomInUnitSphere();
         }
