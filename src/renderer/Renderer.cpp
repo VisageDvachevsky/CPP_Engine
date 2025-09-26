@@ -20,6 +20,9 @@ Renderer::Renderer() {
     createQuad();
     createGrid();
     
+    // Initialize primitive renderer first
+    initializePrimitiveRenderer();
+    
     m_pathTracerShader = ResourceManager::instance().loadShader(
         "pathtracer", "shaders/pathtracer.vert", "shaders/pathtracer.frag");
     
@@ -28,6 +31,13 @@ Renderer::Renderer() {
     
     m_gridShader = ResourceManager::instance().loadShader(
         "grid", "shaders/grid.vert", "shaders/grid.frag");
+    
+    // Log shader loading status
+    if (m_pathTracerShader && m_pathTracerShader->isValid()) {
+        LOG_INFO("PathTracer shader loaded successfully");
+    } else {
+        LOG_ERROR("Failed to load PathTracer shader - will render primitives only");
+    }
     
     LOG_INFO("Renderer initialized");
 }
@@ -125,7 +135,16 @@ void Renderer::initializePrimitiveRenderer() {
 void Renderer::render(const Scene& scene, const Camera& camera) {
     m_drawCalls = 0;
 
-    if (!m_pathTracerShader->isValid()) {
+    if (!m_pathTracerShader || !m_pathTracerShader->isValid()) {
+        LOG_ERROR("PathTracer shader is invalid, skipping render");
+        // Still render primitives if possible
+        if (m_primitiveRenderer) {
+            renderPrimitives(scene, camera);
+        }
+        if (m_gridShader && m_gridShader->isValid()) {
+            renderGrid(camera);
+        }
+        updateStats();
         return;
     }
     

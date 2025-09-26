@@ -199,19 +199,18 @@ bool intersectPlane(Ray ray, Plane plane, out float t) {
     return t > EPSILON;
 }
 
-// Ray-AABB (cube) intersection
 bool intersectCube(Ray ray, Cube cube, out float t, out vec3 normal) {
     vec3 halfSize = cube.size * 0.5;
-    vec3 min = cube.center - halfSize;
-    vec3 max = cube.center + halfSize;
+    vec3 boxMin = cube.center - halfSize;
+    vec3 boxMax = cube.center + halfSize;  /
     
     vec3 invDir = 1.0 / ray.direction;
     
-    vec3 t1 = (min - ray.origin) * invDir;
-    vec3 t2 = (max - ray.origin) * invDir;
+    vec3 t1 = (boxMin - ray.origin) * invDir;
+    vec3 t2 = (boxMax - ray.origin) * invDir;
     
-    vec3 tmin = min(t1, t2);
-    vec3 tmax = max(t1, t2);
+    vec3 tmin = min(t1, t2);  
+    vec3 tmax = max(t1, t2); 
     
     float tNear = max(max(tmin.x, tmin.y), tmin.z);
     float tFar = min(min(tmax.x, tmax.y), tmax.z);
