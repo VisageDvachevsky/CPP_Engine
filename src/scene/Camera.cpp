@@ -67,10 +67,15 @@ void Camera::setPosition(const Vec3& pos) {
 void Camera::lookAt(const Vec3& target) {
     m_target = target;
     
-    Vec3 direction = (m_position - target).normalized();
+    Vec3 direction = (target - m_position).normalized();
+    
+    // Вычисляем углы из направления
     m_pitch = std::asin(direction.y) * 180.0f / M_PI;
     m_yaw = std::atan2(direction.z, direction.x) * 180.0f / M_PI;
     
+    LOG_DEBUG("Camera lookAt: target=[{:.2f}, {:.2f}, {:.2f}], yaw={:.1f}, pitch={:.1f}", 
+              target.x, target.y, target.z, m_yaw, m_pitch);
+              
     updateVectors();
 }
 
@@ -84,17 +89,16 @@ void Camera::updateVectors() {
     direction.z = std::sin(yawRad) * std::cos(pitchRad);
     
     m_front = direction.normalized();
-    m_position = m_target - m_front * m_distance;  
     
-    // Calculate right and up vectors
+    // Вычисляем правый и верхний векторы
     m_right = cross(m_front, m_worldUp).normalized();
     m_up = cross(m_right, m_front).normalized();
     
-    // Отладочный вывод:
-    LOG_DEBUG("Camera pos: {:.3f} {:.3f} {:.3f}, target: {:.3f} {:.3f} {:.3f}", 
-          m_position.x, m_position.y, m_position.z,
-          m_target.x, m_target.y, m_target.z);
+    LOG_DEBUG("Camera vectors updated: front=[{:.2f}, {:.2f}, {:.2f}], pos=[{:.2f}, {:.2f}, {:.2f}]", 
+              m_front.x, m_front.y, m_front.z,
+              m_position.x, m_position.y, m_position.z);
 }
+
 Mat4 Camera::getViewMatrix() const {
     return Mat4::lookAt(m_position, m_target, m_up);
 }
@@ -110,22 +114,27 @@ Ray Camera::screenPointToRay(const Vec2& screenPoint) const {
 Ray Camera::screenPointToRay(const Vec2& screenPoint, const Vec2& screenSize) const {
     m_lastScreenSize = screenSize;
     
-    // Convert screen coordinates to NDC (-1 to 1)
+    // Преобразуем координаты экрана в NDC (-1 до 1)
     float x = (2.0f * screenPoint.x) / screenSize.x - 1.0f;
     float y = 1.0f - (2.0f * screenPoint.y) / screenSize.y;
     
-    // Create ray direction in camera space
+    LOG_DEBUG("Screen point: [{:.1f}, {:.1f}] -> NDC: [{:.2f}, {:.2f}]", 
+             screenPoint.x, screenPoint.y, x, y);
+    
+    // Создаем луч в пространстве камеры
     float aspect = screenSize.x / screenSize.y;
     float tanHalfFov = std::tan(m_fov * 0.5f * M_PI / 180.0f);
     
     Vec3 rayDir;
     rayDir.x = x * aspect * tanHalfFov;
     rayDir.y = y * tanHalfFov;
-    rayDir.z = -1.0f; // Forward direction
+    rayDir.z = -1.0f; // Направление вперед
     
-    // Transform to world space
+    // Преобразуем в мировое пространство
     Vec3 worldRayDir = rayDir.x * m_right + rayDir.y * m_up + rayDir.z * (-m_front);
     worldRayDir.normalize();
+    
+    LOG_DEBUG("Ray direction: [{:.2f}, {:.2f}, {:.2f}]", worldRayDir.x, worldRayDir.y, worldRayDir.z);
     
     return Ray(m_position, worldRayDir);
 }

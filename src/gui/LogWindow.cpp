@@ -16,6 +16,11 @@ void LogWindow::show() {
         Logger::clear();
     }
     ImGui::SameLine();
+
+    if (ImGui::Button("Test Double Click")) {
+        LOG_INFO("Manual double click test triggered");
+        // Эта кнопка только для отладки - она позволит проверить, работает ли обработка двойного клика в целом
+    }
     
     // Log level filter
     const char* levels[] = {"All", "Info+", "Warn+", "Error"};
