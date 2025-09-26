@@ -111,6 +111,10 @@ bool Shader::linkProgram(unsigned int vertex, unsigned int fragment) {
 }
 
 int Shader::getUniformLocation(const std::string& name) {
+    if (m_program == 0) {
+        return -1;  
+    }
+    
     if (m_uniformCache.find(name) != m_uniformCache.end()) {
         return m_uniformCache[name];
     }
@@ -121,21 +125,76 @@ int Shader::getUniformLocation(const std::string& name) {
 }
 
 void Shader::setInt(const std::string& name, int value) {
-    glUniform1i(getUniformLocation(name), value);
+    if (m_program == 0) {
+        LOG_WARN("Attempting to set uniform '{}' on invalid shader", name);
+        return;
+    }
+    
+    int location = getUniformLocation(name);
+    if (location == -1) {
+        LOG_DEBUG("Uniform '{}' not found in shader", name);
+        return;
+    }
+    
+    glUniform1i(location, value);
 }
 
 void Shader::setFloat(const std::string& name, float value) {
-    glUniform1f(getUniformLocation(name), value);
+    if (m_program == 0) {
+        LOG_WARN("Attempting to set uniform '{}' on invalid shader", name);
+        return;
+    }
+    
+    int location = getUniformLocation(name);
+    if (location == -1) {
+        LOG_DEBUG("Uniform '{}' not found in shader", name);
+        return;
+    }
+    
+    glUniform1f(location, value);
 }
 
 void Shader::setVec3(const std::string& name, const Vec3& value) {
-    glUniform3fv(getUniformLocation(name), 1, value.data());
+    if (m_program == 0) {
+        LOG_WARN("Attempting to set uniform '{}' on invalid shader", name);
+        return;
+    }
+    
+    int location = getUniformLocation(name);
+    if (location == -1) {
+        LOG_DEBUG("Uniform '{}' not found in shader", name);
+        return;
+    }
+    
+    glUniform3fv(location, 1, value.data());
 }
 
 void Shader::setMat4(const std::string& name, const Mat4& value) {
-    glUniformMatrix4fv(getUniformLocation(name), 1, GL_FALSE, value.data());
+    if (m_program == 0) {
+        LOG_WARN("Attempting to set uniform '{}' on invalid shader", name);
+        return;
+    }
+    
+    int location = getUniformLocation(name);
+    if (location == -1) {
+        LOG_DEBUG("Uniform '{}' not found in shader", name);
+        return;
+    }
+    
+    glUniformMatrix4fv(location, 1, GL_FALSE, value.data());
 }
 
 void Shader::setVec2(const std::string& name, const Vec2& value) {
-    glUniform2fv(getUniformLocation(name), 1, value.data());
+    if (m_program == 0) {
+        LOG_WARN("Attempting to set uniform '{}' on invalid shader", name);
+        return;
+    }
+    
+    int location = getUniformLocation(name);
+    if (location == -1) {
+        LOG_DEBUG("Uniform '{}' not found in shader", name);
+        return;
+    }
+    
+    glUniform2fv(location, 1, value.data());
 }

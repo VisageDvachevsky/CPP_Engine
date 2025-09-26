@@ -23,11 +23,26 @@ Renderer::Renderer() {
     m_pathTracerShader = ResourceManager::instance().loadShader(
         "pathtracer", "shaders/pathtracer.vert", "shaders/pathtracer.frag");
     
+    if (!m_pathTracerShader || !m_pathTracerShader->isValid()) {
+        LOG_ERROR("CRITICAL: PathTracer shader failed to load - renderer will be disabled");
+        m_pathTracerShader = nullptr;
+    }
+    
     m_wireframeShader = ResourceManager::instance().loadShader(
         "wireframe", "shaders/wireframe.vert", "shaders/wireframe.frag");
     
+    if (!m_wireframeShader || !m_wireframeShader->isValid()) {
+        LOG_WARN("Wireframe shader failed to load - selection outlines disabled");
+        m_wireframeShader = nullptr;
+    }
+    
     m_gridShader = ResourceManager::instance().loadShader(
         "grid", "shaders/grid.vert", "shaders/grid.frag");
+        
+    if (!m_gridShader || !m_gridShader->isValid()) {
+        LOG_WARN("Grid shader failed to load - grid rendering disabled");
+        m_gridShader = nullptr;
+    }
     
     LOG_INFO("Renderer initialized");
 }
@@ -117,7 +132,8 @@ void Renderer::clear() {
 }
 
 void Renderer::render(const Scene& scene, const Camera& camera) {
-    if (!m_pathTracerShader->isValid()) {
+    if (!m_pathTracerShader || !m_pathTracerShader->isValid()) {
+        LOG_ERROR("PathTracer shader is null or invalid - skipping render");
         return;
     }
     
@@ -144,8 +160,14 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
     m_pathTracerShader->setInt("u_maxBounces", m_maxBounces);
     m_pathTracerShader->setInt("u_samplesPerPixel", m_samplesPerPixel);
     
-    // New approach: pass the objects as arrays of serialized data
-    updateSceneDataForShader(scene);
+    if (!scene.getObjects().empty()) {
+        updateSceneDataForShader(scene);
+    } else {
+        LOG_WARN("Scene has no objects - rendering empty scene");
+        m_pathTracerShader->setInt("u_numSpheres", 0);
+        m_pathTracerShader->setInt("u_numPlanes", 0);
+        m_pathTracerShader->setInt("u_numCubes", 0);
+    }
     
     // Draw the fullscreen quad
     glBindVertexArray(m_quadVAO);
@@ -158,28 +180,110 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
     updateStats();
 }
 
+void Renderer::uploadShaderData() {
+    // Upload sphere data
+    for (size_t i = 0; i < m_sphereData.size() && i < MAX_PRIMITIVES; i++) {
+        const auto& sphere = m_sphereData[i];
+        std::string base = "u_spheres[" + std::to_string(i) + "]";
+        
+        m_pathTracerShader->setVec3(base + ".center", sphere.position);
+        m_pathTracerShader->setFloat(base + ".radius", sphere.scale.x);
+        m_pathTracerShader->setVec3(base + ".color", sphere.color);
+        m_pathTracerShader->setInt(base + ".materialType", sphere.materialType);
+        m_pathTracerShader->setFloat(base + ".roughness", sphere.roughness);
+        m_pathTracerShader->setFloat(base + ".ior", sphere.ior);
+        m_pathTracerShader->setFloat(base + ".metalness", sphere.metalness);
+        m_pathTracerShader->setVec3(base + ".emission", sphere.emission);
+    }
+    
+    // Upload plane data
+    for (size_t i = 0; i < m_planeData.size() && i < MAX_PRIMITIVES; i++) {
+        const auto& plane = m_planeData[i];
+        std::string base = "u_planes[" + std::to_string(i) + "]";
+        
+        m_pathTracerShader->setVec3(base + ".point", plane.position);
+        m_pathTracerShader->setVec3(base + ".normal", plane.normal);
+        m_pathTracerShader->setVec3(base + ".color", plane.color);
+        m_pathTracerShader->setInt(base + ".materialType", plane.materialType);
+        m_pathTracerShader->setFloat(base + ".roughness", plane.roughness);
+        m_pathTracerShader->setFloat(base + ".metalness", plane.metalness);
+        m_pathTracerShader->setVec3(base + ".emission", plane.emission);
+    }
+    
+    // Upload cube data
+    for (size_t i = 0; i < m_cubeData.size() && i < MAX_PRIMITIVES; i++) {
+        const auto& cube = m_cubeData[i];
+        std::string base = "u_cubes[" + std::to_string(i) + "]";
+        
+        m_pathTracerShader->setVec3(base + ".center", cube.position);
+        m_pathTracerShader->setVec3(base + ".size", cube.scale);
+        m_pathTracerShader->setVec3(base + ".color", cube.color);
+        m_pathTracerShader->setInt(base + ".materialType", cube.materialType);
+        m_pathTracerShader->setFloat(base + ".roughness", cube.roughness);
+        m_pathTracerShader->setFloat(base + ".ior", cube.ior);
+        m_pathTracerShader->setFloat(base + ".metalness", cube.metalness);
+        m_pathTracerShader->setVec3(base + ".emission", cube.emission);
+    }
+}
+
 void Renderer::updateSceneDataForShader(const Scene& scene) {
     // Clear previous data
     m_sphereData.clear();
     m_planeData.clear();
     m_cubeData.clear();
     
+    // Get objects reference
+    const auto& objects = scene.getObjects();
+    
+    if (objects.empty()) {
+        LOG_DEBUG("No objects in scene");
+        m_pathTracerShader->setInt("u_numSpheres", 0);
+        m_pathTracerShader->setInt("u_numPlanes", 0);
+        m_pathTracerShader->setInt("u_numCubes", 0);
+        return;
+    }
+    
     // Count objects by type
     size_t sphereCount = 0;
     size_t planeCount = 0;
     size_t cubeCount = 0;
     
-    // First pass: count objects by type
-    const auto& objects = scene.getObjects();
+    // First pass: count objects by type with nullptr checks
     for (const auto& obj : objects) {
+        if (!obj) { 
+            LOG_WARN("Found null object in scene");
+            continue;
+        }
+        
         if (!obj->isVisible()) continue;
         
         switch (obj->getType()) {
-            case ObjectType::Sphere: sphereCount++; break;
-            case ObjectType::Plane: planeCount++; break;
-            case ObjectType::Cube: cubeCount++; break;
-            default: break;
+            case ObjectType::Sphere: 
+                if (sphereCount < MAX_PRIMITIVES) sphereCount++; 
+                break;
+            case ObjectType::Plane: 
+                if (planeCount < MAX_PRIMITIVES) planeCount++; 
+                break;
+            case ObjectType::Cube: 
+                if (cubeCount < MAX_PRIMITIVES) cubeCount++; 
+                break;
+            default: 
+                LOG_DEBUG("Unknown object type encountered");
+                break;
         }
+    }
+    
+    if (sphereCount >= MAX_PRIMITIVES) {
+        LOG_WARN("Too many spheres ({}), clamping to {}", sphereCount, MAX_PRIMITIVES-1);
+        sphereCount = MAX_PRIMITIVES - 1;
+    }
+    if (planeCount >= MAX_PRIMITIVES) {
+        LOG_WARN("Too many planes ({}), clamping to {}", planeCount, MAX_PRIMITIVES-1);
+        planeCount = MAX_PRIMITIVES - 1;
+    }
+    if (cubeCount >= MAX_PRIMITIVES) {
+        LOG_WARN("Too many cubes ({}), clamping to {}", cubeCount, MAX_PRIMITIVES-1);
+        cubeCount = MAX_PRIMITIVES - 1;
     }
     
     // Resize buffers
@@ -187,17 +291,22 @@ void Renderer::updateSceneDataForShader(const Scene& scene) {
     m_planeData.resize(planeCount);
     m_cubeData.resize(cubeCount);
     
-    // Second pass: populate data
+    // Second pass: populate data with bounds checking
     size_t sphereIdx = 0;
     size_t planeIdx = 0;
     size_t cubeIdx = 0;
     
     for (const auto& obj : objects) {
-        if (!obj->isVisible()) continue;
+        if (!obj || !obj->isVisible()) continue;
         
-        // Get common data
+        // Get common data with error checking
         IntersectionData data;
-        obj->getIntersectionData(data);
+        try {
+            obj->getIntersectionData(data);
+        } catch (const std::exception& e) {
+            LOG_ERROR("Failed to get intersection data for object: {}", e.what());
+            continue;
+        }
         
         switch (obj->getType()) {
             case ObjectType::Sphere:
@@ -220,49 +329,8 @@ void Renderer::updateSceneDataForShader(const Scene& scene) {
         }
     }
     
-    // Upload sphere data
-    for (size_t i = 0; i < m_sphereData.size(); i++) {
-        const auto& sphere = m_sphereData[i];
-        std::string base = "u_spheres[" + std::to_string(i) + "]";
-        
-        m_pathTracerShader->setVec3(base + ".center", sphere.position);
-        m_pathTracerShader->setFloat(base + ".radius", sphere.scale.x);
-        m_pathTracerShader->setVec3(base + ".color", sphere.color);
-        m_pathTracerShader->setInt(base + ".materialType", sphere.materialType);
-        m_pathTracerShader->setFloat(base + ".roughness", sphere.roughness);
-        m_pathTracerShader->setFloat(base + ".ior", sphere.ior);
-        m_pathTracerShader->setFloat(base + ".metalness", sphere.metalness);
-        m_pathTracerShader->setVec3(base + ".emission", sphere.emission);
-    }
-    
-    // Upload plane data
-    for (size_t i = 0; i < m_planeData.size(); i++) {
-        const auto& plane = m_planeData[i];
-        std::string base = "u_planes[" + std::to_string(i) + "]";
-        
-        m_pathTracerShader->setVec3(base + ".point", plane.position);
-        m_pathTracerShader->setVec3(base + ".normal", plane.normal);
-        m_pathTracerShader->setVec3(base + ".color", plane.color);
-        m_pathTracerShader->setInt(base + ".materialType", plane.materialType);
-        m_pathTracerShader->setFloat(base + ".roughness", plane.roughness);
-        m_pathTracerShader->setFloat(base + ".metalness", plane.metalness);
-        m_pathTracerShader->setVec3(base + ".emission", plane.emission);
-    }
-    
-    // Upload cube data (for intersection in the shader)
-    for (size_t i = 0; i < m_cubeData.size(); i++) {
-        const auto& cube = m_cubeData[i];
-        std::string base = "u_cubes[" + std::to_string(i) + "]";
-        
-        m_pathTracerShader->setVec3(base + ".center", cube.position);
-        m_pathTracerShader->setVec3(base + ".size", cube.scale);
-        m_pathTracerShader->setVec3(base + ".color", cube.color);
-        m_pathTracerShader->setInt(base + ".materialType", cube.materialType);
-        m_pathTracerShader->setFloat(base + ".roughness", cube.roughness);
-        m_pathTracerShader->setFloat(base + ".ior", cube.ior);
-        m_pathTracerShader->setFloat(base + ".metalness", cube.metalness);
-        m_pathTracerShader->setVec3(base + ".emission", cube.emission);
-    }
+    // Upload data to shader with bounds checking
+    uploadShaderData();
     
     // Set counts
     m_pathTracerShader->setInt("u_numSpheres", static_cast<int>(m_sphereData.size()));

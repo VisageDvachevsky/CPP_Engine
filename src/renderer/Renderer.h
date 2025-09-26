@@ -51,6 +51,8 @@ private:
     void updateSceneDataForShader(const Scene& scene);
     void renderGrid(const Camera& camera);
     void updateStats();
+
+    void uploadShaderData();
     
     // Wireframe rendering
     void renderObjectWireframe(const Object& object);
@@ -71,6 +73,8 @@ private:
     // Geometry
     unsigned int m_quadVAO = 0, m_quadVBO = 0;
     unsigned int m_gridVAO = 0, m_gridVBO = 0, m_gridIBO = 0;
+
+    static constexpr size_t MAX_PRIMITIVES = 64;
     
     // Viewport
     Vec2 m_viewportSize{1920, 1080};
