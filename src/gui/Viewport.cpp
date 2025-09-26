@@ -71,36 +71,51 @@ void Viewport::onResize(int width, int height) {
 void Viewport::handleInput(Scene& scene, Camera& camera) {
     ImGuiIO& io = ImGui::GetIO();
     
-    // Если ImGui захватил ввод, игнорируем его для viewport
+    // If ImGui captured input, ignore it for viewport
     if (io.WantCaptureMouse) {
         return;
     }
     
+    // Get mouse position relative to viewport
     ImVec2 mousePos = ImGui::GetMousePos();
     Vec2 viewportMousePos = Vec2{mousePos.x - m_viewportPos.x, mousePos.y - m_viewportPos.y};
     
-    // Проверяем, находится ли мышь внутри вьюпорта
+    // Check if mouse is inside viewport
     bool mouseInViewport = viewportMousePos.x >= 0 && viewportMousePos.y >= 0 && 
-                           viewportMousePos.x < m_viewportSize.x && viewportMousePos.y < m_viewportSize.y;
-                           
+                         viewportMousePos.x < m_viewportSize.x && viewportMousePos.y < m_viewportSize.y;
+                         
     if (!mouseInViewport) {
         return;
     }
     
-    // Обрабатываем клики мыши
-    if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT) || 
-        Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT)) {
+    // Process mouse buttons
+    bool isMouseButtonLeftPressed = Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+    bool isMouseButtonRightPressed = Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
+    bool isDoubleClick = Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT);
+    
+    // Log mouse interactions for debugging
+    if (isMouseButtonLeftPressed) {
+        LOG_DEBUG("Left click in viewport at ({:.1f}, {:.1f})", viewportMousePos.x, viewportMousePos.y);
+    }
+    
+    if (isDoubleClick) {
+        LOG_DEBUG("Double click in viewport at ({:.1f}, {:.1f})", viewportMousePos.x, viewportMousePos.y);
+    }
+    
+    // Handle object selection only if left mouse button pressed or double clicked
+    if ((isMouseButtonLeftPressed || isDoubleClick) && !ImGuizmo::IsOver()) {
+        // Convert viewport coordinates to ray for selection
+        Ray ray = camera.screenPointToRay(viewportMousePos, m_viewportSize);
         
-        // Показываем в логе тип события
-        if (Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT)) {
-            LOG_INFO("Viewport: Double click detected at ({}, {})", viewportMousePos.x, viewportMousePos.y);
-        } else {
-            LOG_INFO("Viewport: Single click detected at ({}, {})", viewportMousePos.x, viewportMousePos.y);
-        }
+        // Forward to selection manager with explicit double click state
+        m_editor.getSelection().handleMousePicking(viewportMousePos, camera);
         
-        // В любом случае отправляем событие в SelectionManager
-        if (!ImGuizmo::IsOver()) {
-            m_editor.getSelection().handleMousePicking(viewportMousePos, camera);
+        // If double-click, automatically focus on selected object
+        if (isDoubleClick) {
+            m_editor.focusOnSelectedObject();
+            
+            // Also activate transform gizmo
+            m_editor.activateGizmo();
         }
     }
 }
@@ -109,12 +124,14 @@ void Viewport::renderViewportContent(Scene& scene, Camera& camera, Renderer& ren
     m_framebuffer->bind();
     
     glViewport(0, 0, static_cast<int>(m_viewportSize.x), static_cast<int>(m_viewportSize.y));
-
+    
     renderer.setViewportSize(static_cast<int>(m_viewportSize.x), static_cast<int>(m_viewportSize.y));
     
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+    // Clear with a slightly darker background for better visibility
+    glClearColor(0.08f, 0.08f, 0.08f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
+    // Render the scene
     renderer.render(scene, camera);
     
     m_framebuffer->unbind();
@@ -143,13 +160,20 @@ void Viewport::renderOverlays(Scene& scene, Camera& camera, Renderer& renderer) 
 }
 
 void Viewport::renderGizmos(Scene& scene, Camera& camera) {
+    // Only render gizmos if the viewport is focused
+    if (!m_isFocused) {
+        return;
+    }
+    
     ImGuizmo::SetOrthographic(false);
     ImGuizmo::SetDrawlist();
     ImGuizmo::SetRect(m_viewportPos.x, m_viewportPos.y, m_viewportSize.x, m_viewportSize.y);
     
-    if (m_editor.getSelection().hasSelection()) {
+    // Check if there is a selection and gizmo is active
+    if (m_editor.getSelection().hasSelection() && m_editor.isGizmoActive()) {
         Object* selectedObject = m_editor.getSelection().getSelectedObject();
         if (selectedObject) {
+            LOG_DEBUG("Updating gizmo for object '{}'", selectedObject->getName());
             m_editor.getGizmo().update(*selectedObject, camera);
         }
     }

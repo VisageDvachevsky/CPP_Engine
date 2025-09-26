@@ -202,9 +202,9 @@ void Editor::createPrimitive(ObjectType type) {
             name = "Cube_" + std::to_string(objectCount);
             object = std::make_unique<Object>(name, type);
             
-            // Set default properties for cube
+            // Set default properties for cube - make it slightly bigger for visibility
             object->getTransform().position = {0, 0.5f, 0};
-            object->getTransform().scale = {1, 1, 1};
+            object->getTransform().scale = {1.5f, 1.0f, 1.5f};
             object->getMaterial().color = generateRandomColor();
             object->getMaterial().type = MaterialType::Diffuse;
             break;
@@ -215,7 +215,7 @@ void Editor::createPrimitive(ObjectType type) {
             
             // Set default properties for plane
             object->getTransform().position = {0, 0, 0};
-            object->getTransform().scale = {10, 1, 10};
+            object->getTransform().scale = {10, 0.01f, 10}; // Very thin in Y dimension
             object->getMaterial().color = Vec3{0.8f, 0.8f, 0.8f};
             object->getMaterial().type = MaterialType::Diffuse;
             break;
@@ -225,27 +225,51 @@ void Editor::createPrimitive(ObjectType type) {
             return;
     }
     
-    // Place the object in front of the camera if possible
+    // Get camera position and direction
     Vec3 cameraPos = m_camera.getPosition();
     Vec3 cameraDir = m_camera.getDirection();
+    Vec3 cameraForward = Vec3{cameraDir.x, 0, cameraDir.z}; // Project onto XZ plane
     
-    // Position 5 units in front of the camera
-    Vec3 placementPos = cameraPos + cameraDir * 5.0f;
+    // Normalize if necessary
+    if (cameraForward.lengthSq() > 0.0001f) {
+        cameraForward.normalize();
+    } else {
+        cameraForward = Vec3{0, 0, 1};
+    }
     
-    // Make sure the Y coordinate is reasonable (for planes, keep at 0)
+    // Place the object in front of the camera
+    // Position 5 units in front of the camera, keeping Y coordinate as set above
+    float distance = 5.0f;
+    Vec3 placementPos = Vec3{
+        cameraPos.x + cameraForward.x * distance,
+        object->getTransform().position.y, // Keep the Y value we set earlier
+        cameraPos.z + cameraForward.z * distance
+    };
+    
+    // Keep planes at Y=0, but place other objects at the calculated position
     if (type != ObjectType::Plane) {
         object->getTransform().position = placementPos;
     }
+    
+    // Log position information for debugging
+    LOG_INFO("Creating {} at position [{:.2f}, {:.2f}, {:.2f}]", 
+             name, 
+             object->getTransform().position.x,
+             object->getTransform().position.y,
+             object->getTransform().position.z);
     
     // Add to scene and select it
     Object* rawPtr = object.get();
     m_scene.addObject(std::move(object));
     m_selectionManager->selectObject(rawPtr);
     
-    // Activate transform gizmo
+    // Activate transform gizmo immediately to make it more obvious
     m_gizmoActive = true;
     
-    LOG_INFO("Created {} primitive '{}'", 
+    // Set the editor to Edit mode to ensure gizmo is visible
+    setMode(EditorMode::Edit);
+    
+    LOG_INFO("Created {} primitive '{}' and activated transform gizmo", 
              type == ObjectType::Sphere ? "Sphere" : 
              (type == ObjectType::Cube ? "Cube" : "Plane"), 
              name);
@@ -304,19 +328,34 @@ void Editor::duplicateSelectedObject() {
 
 void Editor::focusOnSelectedObject() {
     if (!m_selectionManager->hasSelection()) {
+        LOG_WARN("Cannot focus camera - no object selected");
         return;
     }
     
     Object* selectedObject = m_selectionManager->getSelectedObject();
     if (!selectedObject) {
+        LOG_WARN("Selected object is null");
         return;
     }
     
     const Vec3& position = selectedObject->getTransform().position;
-    float radius = selectedObject->getTransform().scale.x;
+    // Calculate radius based on the largest dimension of the object
+    float radius = std::max(
+        std::max(selectedObject->getTransform().scale.x, 
+                 selectedObject->getTransform().scale.y),
+                 selectedObject->getTransform().scale.z);
+    
+    // Make sure radius isn't too small
+    radius = std::max(radius, 0.5f);
     
     m_editorCamera->focusOnObject(position, radius);
-    LOG_INFO("Focused camera on object '{}'", selectedObject->getName());
+    LOG_INFO("Focused camera on object '{}' at [{:.2f}, {:.2f}, {:.2f}], radius={:.2f}", 
+             selectedObject->getName(),
+             position.x, position.y, position.z,
+             radius);
+    
+    // Automatically enable transform gizmo when focusing
+    m_gizmoActive = true;
 }
 
 Vec3 Editor::generateRandomColor() {

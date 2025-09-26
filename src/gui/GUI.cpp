@@ -362,13 +362,14 @@ void GUI::showMenuBar() {
             bool isEditMode = (m_editor.getMode() == EditorMode::Edit);
             bool isPlayMode = (m_editor.getMode() == EditorMode::Play);
             
-            if (ImGui::MenuItem("Object Mode", "1", &isObjectMode)) {
+            // FIX: Add unique identifiers to prevent ID conflicts
+            if (ImGui::MenuItem("Object Mode##MenuItemMode1", "1", &isObjectMode)) {
                 m_editor.setMode(EditorMode::Object);
             }
-            if (ImGui::MenuItem("Edit Mode", "2", &isEditMode)) {
+            if (ImGui::MenuItem("Edit Mode##MenuItemMode2", "2", &isEditMode)) {
                 m_editor.setMode(EditorMode::Edit);
             }
-            if (ImGui::MenuItem("Play Mode", "3", &isPlayMode)) {
+            if (ImGui::MenuItem("Play Mode##MenuItemMode3", "3", &isPlayMode)) {
                 m_editor.setMode(EditorMode::Play);
             }
             
@@ -381,13 +382,13 @@ void GUI::showMenuBar() {
             bool isRotate = (gizmo.getMode() == GizmoMode::Rotate);
             bool isScale = (gizmo.getMode() == GizmoMode::Scale);
             
-            if (ImGui::MenuItem("Translate", "W", &isTranslate)) {
+            if (ImGui::MenuItem("Translate##MenuItemTransform1", "W", &isTranslate)) {
                 gizmo.setMode(GizmoMode::Translate);
             }
-            if (ImGui::MenuItem("Rotate", "E", &isRotate)) {
+            if (ImGui::MenuItem("Rotate##MenuItemTransform2", "E", &isRotate)) {
                 gizmo.setMode(GizmoMode::Rotate);
             }
-            if (ImGui::MenuItem("Scale", "R", &isScale)) {
+            if (ImGui::MenuItem("Scale##MenuItemTransform3", "R", &isScale)) {
                 gizmo.setMode(GizmoMode::Scale);
             }
             
@@ -396,10 +397,10 @@ void GUI::showMenuBar() {
             bool isWorld = (gizmo.getSpace() == GizmoSpace::World);
             bool isLocal = (gizmo.getSpace() == GizmoSpace::Local);
             
-            if (ImGui::MenuItem("World Space", "T", &isWorld)) {
+            if (ImGui::MenuItem("World Space##MenuItemSpace1", "T", &isWorld)) {
                 gizmo.setSpace(GizmoSpace::World);
             }
-            if (ImGui::MenuItem("Local Space", "Y", &isLocal)) {
+            if (ImGui::MenuItem("Local Space##MenuItemSpace2", "Y", &isLocal)) {
                 gizmo.setSpace(GizmoSpace::Local);
             }
             
@@ -441,11 +442,12 @@ void GUI::showMenuBar() {
         }
         
         // Mode switcher in the menubar (right-aligned)
+        // FIX: Add unique IDs to mode buttons
         ImGui::PushStyleColor(ImGuiCol_Button, m_editor.getMode() == EditorMode::Object ? 
                              ImVec4{0.3f, 0.5f, 0.7f, 1.0f} : ImVec4{0.2f, 0.2f, 0.2f, 1.0f});
         ImVec2 windowSize = ImGui::GetWindowSize();
         ImGui::SameLine(windowSize.x - 300);
-        if (ImGui::Button("Object", ImVec2(80, 0))) {
+        if (ImGui::Button("Object##ModeButton1", ImVec2(80, 0))) {
             m_editor.setMode(EditorMode::Object);
         }
         ImGui::PopStyleColor();
@@ -453,7 +455,7 @@ void GUI::showMenuBar() {
         ImGui::PushStyleColor(ImGuiCol_Button, m_editor.getMode() == EditorMode::Edit ? 
                              ImVec4{0.3f, 0.5f, 0.7f, 1.0f} : ImVec4{0.2f, 0.2f, 0.2f, 1.0f});
         ImGui::SameLine();
-        if (ImGui::Button("Edit", ImVec2(80, 0))) {
+        if (ImGui::Button("Edit##ModeButton2", ImVec2(80, 0))) {
             m_editor.setMode(EditorMode::Edit);
         }
         ImGui::PopStyleColor();
@@ -461,7 +463,7 @@ void GUI::showMenuBar() {
         ImGui::PushStyleColor(ImGuiCol_Button, m_editor.getMode() == EditorMode::Play ? 
                              ImVec4{0.3f, 0.7f, 0.3f, 1.0f} : ImVec4{0.2f, 0.2f, 0.2f, 1.0f});
         ImGui::SameLine();
-        if (ImGui::Button("Play", ImVec2(80, 0))) {
+        if (ImGui::Button("Play##ModeButton3", ImVec2(80, 0))) {
             m_editor.setMode(EditorMode::Play);
         }
         ImGui::PopStyleColor();

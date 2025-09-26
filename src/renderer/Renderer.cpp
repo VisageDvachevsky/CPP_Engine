@@ -116,12 +116,18 @@ void Renderer::clear() {
     m_drawCalls = 0;
 }
 
+void Renderer::initializePrimitiveRenderer() {
+    m_primitiveRenderer = std::make_unique<PrimitiveRenderer>();
+    m_primitiveRenderer->initialize();
+    LOG_INFO("Primitive renderer initialized");
+}
+
 void Renderer::render(const Scene& scene, const Camera& camera) {
+    m_drawCalls = 0;
+
     if (!m_pathTracerShader->isValid()) {
         return;
     }
-    
-    renderGrid(camera);
     
     Vec2 viewportSize = m_viewportSize;
     
@@ -144,8 +150,9 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
     m_pathTracerShader->setInt("u_maxBounces", m_maxBounces);
     m_pathTracerShader->setInt("u_samplesPerPixel", m_samplesPerPixel);
     
-    // New approach: pass the objects as arrays of serialized data
     updateSceneDataForShader(scene);
+    renderGrid(camera);
+    renderPrimitives(scene, camera);
     
     // Draw the fullscreen quad
     glBindVertexArray(m_quadVAO);
@@ -157,6 +164,34 @@ void Renderer::render(const Scene& scene, const Camera& camera) {
     
     updateStats();
 }
+
+void Renderer::renderPrimitives(const Scene& scene, const Camera& camera) {
+    if (!m_primitiveRenderer) {
+        return;
+    }
+    
+    m_primitiveRenderer->setCamera(camera);
+    m_primitiveRenderer->setViewportSize(
+        static_cast<int>(m_viewportSize.x),
+        static_cast<int>(m_viewportSize.y)
+    );
+    
+    const auto& objects = scene.getObjects();
+    for (const auto& obj : objects) {
+        if (!obj->isVisible()) {
+            continue;
+        }
+        
+        ObjectType type = obj->getType();
+        Mat4 transform = obj->getTransform().getMatrix();
+        Vec3 color = obj->getMaterial().color;
+        bool isSelected = obj->isSelected();
+        
+        m_primitiveRenderer->renderPrimitive(type, transform, color, isSelected, false);
+        m_drawCalls++;
+    }
+}
+
 
 void Renderer::updateSceneDataForShader(const Scene& scene) {
     // Clear previous data
@@ -300,51 +335,39 @@ void Renderer::renderGrid(const Camera& camera) {
 }
 
 void Renderer::renderSelectionOutline(const Object& object, const Camera& camera) {
-    if (!m_wireframeShader->isValid()) return;
+    if (!m_primitiveRenderer) {
+        return;
+    }
     
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glLineWidth(2.0f);
+    // Update camera information
+    m_primitiveRenderer->setCamera(camera);
     
-    m_wireframeShader->use();
+    // Get object information
+    ObjectType type = object.getType();
+    Mat4 transform = object.getTransform().getMatrix();
     
-    Mat4 model = object.getTransform().getMatrix();
-    Mat4 view = camera.getViewMatrix();
-    Mat4 proj = camera.getProjectionMatrix(m_viewportSize.x / m_viewportSize.y);
-    Mat4 mvp = proj * view * model;
+    // Render wireframe with orange color and thicker lines
+    m_primitiveRenderer->renderWireframe(type, transform, Vec3{1.0f, 0.5f, 0.0f}, 2.0f);
     
-    m_wireframeShader->setMat4("u_mvp", mvp);
-    m_wireframeShader->setVec3("u_color", Vec3{1.0f, 0.5f, 0.0f}); // Orange selection
-    
-    renderObjectWireframe(object);
-    
-    m_wireframeShader->unuse();
-    
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glLineWidth(1.0f);
+    m_drawCalls++;
 }
 
 void Renderer::renderHoverOutline(const Object& object, const Camera& camera) {
-    if (!m_wireframeShader->isValid()) return;
+    if (!m_primitiveRenderer) {
+        return;
+    }
     
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glLineWidth(1.5f);
+    // Update camera information
+    m_primitiveRenderer->setCamera(camera);
     
-    m_wireframeShader->use();
+    // Get object information
+    ObjectType type = object.getType();
+    Mat4 transform = object.getTransform().getMatrix();
     
-    Mat4 model = object.getTransform().getMatrix();
-    Mat4 view = camera.getViewMatrix();
-    Mat4 proj = camera.getProjectionMatrix(m_viewportSize.x / m_viewportSize.y);
-    Mat4 mvp = proj * view * model;
+    // Render wireframe with light gray color
+    m_primitiveRenderer->renderWireframe(type, transform, Vec3{0.8f, 0.8f, 0.8f}, 1.5f);
     
-    m_wireframeShader->setMat4("u_mvp", mvp);
-    m_wireframeShader->setVec3("u_color", Vec3{0.8f, 0.8f, 0.8f}); // Gray hover
-    
-    renderObjectWireframe(object);
-    
-    m_wireframeShader->unuse();
-    
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glLineWidth(1.0f);
+    m_drawCalls++;
 }
 
 void Renderer::renderObjectWireframe(const Object& object) {

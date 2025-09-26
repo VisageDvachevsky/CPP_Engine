@@ -2,6 +2,7 @@
 
 #include "Shader.h"
 #include "math/Vec2.h"
+#include "PrimitiveRenderer.h"
 #include <memory>
 #include <vector>
 
@@ -46,13 +47,15 @@ private:
     // Initialization
     void createQuad();
     void createGrid();
+    void initializePrimitiveRenderer();  
     
     // Rendering helpers
     void updateSceneDataForShader(const Scene& scene);
     void renderGrid(const Camera& camera);
+    void renderPrimitives(const Scene& scene, const Camera& camera); 
     void updateStats();
     
-    // Wireframe rendering
+    // Wireframe rendering (legacy?)
     void renderObjectWireframe(const Object& object);
     void renderSphereWireframe();
     void renderCubeWireframe();
@@ -67,6 +70,9 @@ private:
     std::vector<IntersectionData> m_sphereData;
     std::vector<IntersectionData> m_planeData;
     std::vector<IntersectionData> m_cubeData;
+
+    // Primitive rendering
+    std::unique_ptr<PrimitiveRenderer> m_primitiveRenderer;
     
     // Geometry
     unsigned int m_quadVAO = 0, m_quadVBO = 0;

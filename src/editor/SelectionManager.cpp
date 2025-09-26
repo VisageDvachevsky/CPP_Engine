@@ -96,6 +96,11 @@ Object* SelectionManager::pickObject(const Ray& ray) {
     LOG_DEBUG("Ray picking, checking {} objects", objects.size());
     
     for (const auto& obj : objects) {
+        // Skip invisible objects
+        if (!obj->isVisible()) {
+            continue;
+        }
+        
         float distance;
         bool hit = false;
         
@@ -125,7 +130,7 @@ Object* SelectionManager::pickObject(const Ray& ray) {
         if (hit && distance < closestDistance && distance > 0.001f) {
             closestDistance = distance;
             closestObject = obj.get();
-            LOG_DEBUG("Hit object '{}' at distance {}", obj->getName(), distance);
+            LOG_DEBUG("Hit object '{}' at distance {:.3f}", obj->getName(), distance);
         }
     }
     
@@ -133,16 +138,27 @@ Object* SelectionManager::pickObject(const Ray& ray) {
 }
 
 void SelectionManager::handleMousePicking(const Vec2& mousePos, const Camera& camera) {
+    if (ImGui::GetIO().WantCaptureMouse) {
+        return;
+    }
+
     Ray ray = camera.screenPointToRay(mousePos);
     Object* hitObject = pickObject(ray);
     
-    bool isDoubleClick = Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT);
+    // Get double-click state explicitly - no longer relying on unreliable detection
+    bool isDoubleClicked = Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT);
     
     if (hitObject) {
         LOG_INFO("Ray hit object '{}'", hitObject->getName());
         
-        if (isDoubleClick) {
-            LOG_INFO("Double click on object '{}'", hitObject->getName());
+        // Add debug info
+        LOG_DEBUG("Object position: [{:.2f}, {:.2f}, {:.2f}]", 
+                 hitObject->getTransform().position.x,
+                 hitObject->getTransform().position.y,
+                 hitObject->getTransform().position.z);
+        
+        if (isDoubleClicked) {
+            LOG_INFO("Double click detected on object '{}'", hitObject->getName());
             
             // Always select on double click
             selectObject(hitObject);
@@ -150,24 +166,30 @@ void SelectionManager::handleMousePicking(const Vec2& mousePos, const Camera& ca
             // Focus camera on double-clicked object
             if (m_objectFocusCallback) {
                 Vec3 position = hitObject->getTransform().position;
-                float radius = hitObject->getTransform().scale.x;
-                LOG_INFO("Focusing camera on object '{}'", hitObject->getName());
+                float radius = std::max(
+                    std::max(hitObject->getTransform().scale.x, 
+                             hitObject->getTransform().scale.y),
+                             hitObject->getTransform().scale.z);
+                LOG_INFO("Focusing camera on object '{}', position=[{:.2f}, {:.2f}, {:.2f}], radius={:.2f}", 
+                         hitObject->getName(), position.x, position.y, position.z, radius);
                 m_objectFocusCallback(position, radius);
             }
             
             // Activate transform gizmo (this will be picked up by Editor)
             if (m_activateGizmoCallback) {
+                LOG_INFO("Activating transform gizmo");
                 m_activateGizmoCallback();
             }
         } else {
             // Single click just selects the object
+            LOG_INFO("Single click - selecting object '{}'", hitObject->getName());
             selectObject(hitObject);
         }
     } else {
         LOG_INFO("Ray did not hit any object");
         
         // On single click in empty space, deselect all
-        if (!isDoubleClick) {
+        if (!isDoubleClicked) {
             deselectAll();
         }
     }
@@ -237,19 +259,36 @@ bool SelectionManager::rayIntersectPlane(const Ray& ray, const Vec3& point, cons
 }
 
 bool SelectionManager::rayIntersectAABB(const Ray& ray, const Vec3& minBounds, const Vec3& maxBounds, float& distance) {
-    Vec3 invDir = Vec3{1.0f / ray.direction.x, 1.0f / ray.direction.y, 1.0f / ray.direction.z};
+    Vec3 invDir = Vec3{
+        ray.direction.x != 0 ? 1.0f / ray.direction.x : std::numeric_limits<float>::max(),
+        ray.direction.y != 0 ? 1.0f / ray.direction.y : std::numeric_limits<float>::max(),
+        ray.direction.z != 0 ? 1.0f / ray.direction.z : std::numeric_limits<float>::max()
+    };
     
     Vec3 t1 = (minBounds - ray.origin) * invDir;
     Vec3 t2 = (maxBounds - ray.origin) * invDir;
     
-    Vec3 tMin = Vec3{std::min(t1.x, t2.x), std::min(t1.y, t2.y), std::min(t1.z, t2.z)};
-    Vec3 tMax = Vec3{std::max(t1.x, t2.x), std::max(t1.y, t2.y), std::max(t1.z, t2.z)};
+    Vec3 tMin = Vec3{
+        std::min(t1.x, t2.x), 
+        std::min(t1.y, t2.y), 
+        std::min(t1.z, t2.z)
+    };
+    Vec3 tMax = Vec3{
+        std::max(t1.x, t2.x), 
+        std::max(t1.y, t2.y), 
+        std::max(t1.z, t2.z)
+    };
     
     float tNear = std::max(std::max(tMin.x, tMin.y), tMin.z);
     float tFar = std::min(std::min(tMax.x, tMax.y), tMax.z);
     
-    if (tNear > tFar || tFar < 0) return false;
+    // Check if there's a valid intersection
+    if (tNear > tFar || tFar < 0) {
+        return false;
+    }
     
-    distance = tNear > 0 ? tNear : tFar;
+    // Return the nearest positive intersection point
+    distance = tNear > 0.001f ? tNear : tFar;
     return distance > 0.001f;
 }
+

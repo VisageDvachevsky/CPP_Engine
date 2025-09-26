@@ -20,7 +20,7 @@ std::unordered_map<int, bool> Input::s_lastMouseButtonPressed;
 std::unordered_map<int, std::chrono::steady_clock::time_point> Input::s_lastClickTime;
 std::unordered_map<int, bool> Input::s_mouseButtonDoubleClicked;
 
-// Коллбэки GLFW
+// GLFW callbacks
 static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
     Input::s_scrollDelta = static_cast<float>(yoffset);
 }
@@ -28,7 +28,8 @@ static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
 static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         Input::s_keyPressed[key] = true;
-        Input::s_keyHeld[key] = true;    } 
+        Input::s_keyHeld[key] = true;
+    } 
     else if (action == GLFW_RELEASE) {
         Input::s_keyHeld[key] = false;
         Input::s_keyPressed[key] = false;
@@ -39,13 +40,15 @@ static void mouseButtonCallback(GLFWwindow* window, int button, int action, int 
     using namespace std::chrono;
     
     if (action == GLFW_PRESS) {
-        // Сначала проверяем двойной клик перед установкой pressed = true
+        // Check for double click before setting pressed = true
         auto now = steady_clock::now();
         if (Input::s_lastClickTime.find(button) != Input::s_lastClickTime.end()) {
-            auto elapsed = duration_cast<duration<double>>(now - Input::s_lastClickTime[button]).count();
+            auto elapsed = duration_cast<milliseconds>(now - Input::s_lastClickTime[button]).count() / 1000.0;
             
             if (elapsed < Input::DOUBLE_CLICK_TIME) {
                 Input::s_mouseButtonDoubleClicked[button] = true;
+                LOG_DEBUG("Double-click detected for button {}, elapsed: {:.3f}s", 
+                         button, elapsed);
             }
         }
         
@@ -65,13 +68,13 @@ static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
 void Input::init(GLFWwindow* window) {
     s_windowHandle = window;
     
-    // Устанавливаем коллбэки
+    // Set up callbacks
     glfwSetScrollCallback(window, scrollCallback);
     glfwSetKeyCallback(window, keyCallback);
     glfwSetMouseButtonCallback(window, mouseButtonCallback);
     glfwSetCursorPosCallback(window, cursorPosCallback);
     
-    // Инициализация начальной позиции мыши и времени
+    // Initialize initial mouse position and time
     double x, y;
     glfwGetCursorPos(window, &x, &y);
     s_mousePos = Vec2{static_cast<float>(x), static_cast<float>(y)};
@@ -95,30 +98,30 @@ void Input::update() {
         s_lastMousePos = s_mousePos;
     }
     
-    // Сбрасываем флаги двойных кликов на следующем кадре после обнаружения
-    for (auto& pair : s_mouseButtonDoubleClicked) {
-        if (pair.second) {
-            LOG_DEBUG("Resetting double click flag for button {}", pair.first);
-            pair.second = false;
+    // Reset double-click flags on the next frame after detection
+    for (auto& [button, isDoubleClicked] : s_mouseButtonDoubleClicked) {
+        if (isDoubleClicked) {
+            LOG_DEBUG("Resetting double click flag for button {}", button);
+            isDoubleClicked = false;
         }
     }
     
-    // Сбрасываем флаги одиночных нажатий
-    for (auto& pair : s_keyPressed) {
-        if (pair.second && s_lastKeyPressed[pair.first]) {
-            pair.second = false;
+    // Reset single press flags
+    for (auto& [key, isPressed] : s_keyPressed) {
+        if (isPressed && s_lastKeyPressed[key]) {
+            isPressed = false;
         }
-        s_lastKeyPressed[pair.first] = s_keyHeld[pair.first];
+        s_lastKeyPressed[key] = s_keyHeld[key];
     }
     
-    // Сбрасываем флаги отпускания кнопок мыши
-    for (auto& pair : s_mouseButtonReleased) {
-        pair.second = false;
+    // Reset mouse button release flags
+    for (auto& [button, isReleased] : s_mouseButtonReleased) {
+        isReleased = false;
     }
     
-    // Сохраняем текущее состояние кнопок мыши
-    for (auto& pair : s_mouseButtonPressed) {
-        s_lastMouseButtonPressed[pair.first] = pair.second;
+    // Store current mouse button states
+    for (auto& [button, isPressed] : s_mouseButtonPressed) {
+        s_lastMouseButtonPressed[button] = isPressed;
     }
 }
 
@@ -155,7 +158,7 @@ float Input::getScrollDelta() {
     if (delta != 0.0f) {
         LOG_DEBUG("Reading scroll delta: {}", delta);
     }
-    s_scrollDelta = 0.0f; // Сбрасываем после чтения
+    s_scrollDelta = 0.0f; 
     return delta;
 }
 

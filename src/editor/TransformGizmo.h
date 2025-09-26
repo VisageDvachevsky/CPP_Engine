@@ -60,6 +60,10 @@ private:
     bool m_isActive = false;
     bool m_isHovered = false;
     
+    // Added tracking for state changes
+    bool m_wasActive = false;
+    bool m_wasHovered = false;
+    
     // Gizmo state
     Mat4 m_gizmoMatrix;
     Vec3 m_gizmoPosition{0, 0, 0};
