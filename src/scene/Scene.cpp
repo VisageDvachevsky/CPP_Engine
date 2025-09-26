@@ -15,21 +15,14 @@ void Scene::update(float dt) {
 void Scene::createDefaultScene() {
     LOG_INFO("Creating default scene...");
     
-    // Ground plane
-    auto ground = std::make_unique<Object>("Ground", ObjectType::Plane);
-    ground->getTransform().position = {0, 0, 0};
-    ground->setScale({10, 1, 10});
-    ground->getMaterial().color = {0.5f, 0.5f, 0.5f};
-    ground->getMaterial().type = MaterialType::Diffuse;
-    addObject(std::move(ground));
-    
-    // Center sphere - metal
+    // Center sphere - metallic with some roughness
     auto centerSphere = std::make_unique<Object>("Metal Sphere", ObjectType::Sphere);
     centerSphere->getTransform().position = {0, 1, 0};
     centerSphere->setScale({1, 1, 1});
     centerSphere->getMaterial().color = {0.7f, 0.6f, 0.5f};
     centerSphere->getMaterial().type = MaterialType::Metal;
-    centerSphere->getMaterial().roughness = 0.0f;
+    centerSphere->getMaterial().roughness = 0.1f;
+    centerSphere->getMaterial().metalness = 1.0f;
     addObject(std::move(centerSphere));
     
     // Left sphere - diffuse
@@ -38,6 +31,7 @@ void Scene::createDefaultScene() {
     leftSphere->setScale({1, 1, 1});
     leftSphere->getMaterial().color = {0.1f, 0.2f, 0.5f};
     leftSphere->getMaterial().type = MaterialType::Diffuse;
+    leftSphere->getMaterial().roughness = 1.0f;
     addObject(std::move(leftSphere));
     
     // Right sphere - glass
@@ -49,13 +43,23 @@ void Scene::createDefaultScene() {
     rightSphere->getMaterial().ior = 1.5f;
     addObject(std::move(rightSphere));
     
-    // Small sphere - emissive-like bright diffuse
-    auto smallSphere = std::make_unique<Object>("Bright Sphere", ObjectType::Sphere);
-    smallSphere->getTransform().position = {0, 3, 1};
-    smallSphere->setScale({0.5f, 0.5f, 0.5f});
-    smallSphere->getMaterial().color = {4.0f, 2.0f, 1.0f}; // Bright for lighting effect
-    smallSphere->getMaterial().type = MaterialType::Diffuse;
-    addObject(std::move(smallSphere));
+    // Small sphere - emissive light source
+    auto lightSphere = std::make_unique<Object>("Light Sphere", ObjectType::Sphere);
+    lightSphere->getTransform().position = {0, 4, 1};
+    lightSphere->setScale({0.5f, 0.5f, 0.5f});
+    lightSphere->getMaterial().color = {1.0f, 1.0f, 1.0f};
+    lightSphere->getMaterial().type = MaterialType::Diffuse;
+    lightSphere->getMaterial().emission = {5.0f, 4.5f, 4.0f}; // Bright white-yellowish light
+    addObject(std::move(lightSphere));
+    
+    // Small blue emissive sphere
+    auto blueLightSphere = std::make_unique<Object>("Blue Light", ObjectType::Sphere);
+    blueLightSphere->getTransform().position = {-3, 0.5f, 2};
+    blueLightSphere->setScale({0.3f, 0.3f, 0.3f});
+    blueLightSphere->getMaterial().color = {0.2f, 0.3f, 1.0f};
+    blueLightSphere->getMaterial().type = MaterialType::Diffuse;
+    blueLightSphere->getMaterial().emission = {0.0f, 1.0f, 5.0f}; // Blue light
+    addObject(std::move(blueLightSphere));
     
     LOG_INFO("Default scene created with {} objects", m_objects.size());
 }

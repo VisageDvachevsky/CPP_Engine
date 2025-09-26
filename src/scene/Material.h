@@ -13,7 +13,8 @@ struct Material {
     MaterialType type = MaterialType::Diffuse;
     float roughness = 0.5f;
     float metalness = 0.0f;
-    float ior = 1.5f; 
+    float ior = 1.5f;
+    Vec3 emission{0.0f, 0.0f, 0.0f}; 
     
     Material() = default;
     

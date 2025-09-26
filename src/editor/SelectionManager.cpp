@@ -2,6 +2,7 @@
 #include "core/Input.h"
 #include "scene/Scene.h"
 #include "scene/Object.h"
+#include "core/Logger.h"
 #include "scene/Camera.h"
 #include "renderer/Renderer.h"
 #include "math/Ray.h"
@@ -13,10 +14,12 @@ SelectionManager::SelectionManager(Scene& scene) : m_scene(scene) {
 }
 
 void SelectionManager::update() {
-    if (!ImGui::GetIO().WantCaptureMouse) {
-        if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT)) {
-            // TODO: Implement mouse picking when viewport system is ready
-        }
+    if (ImGui::GetIO().WantCaptureMouse) {
+        return; 
+    }
+    
+    if (Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT)) {
+        LOG_INFO("SelectionManager: Detected double click");
     }
 }
 
@@ -33,17 +36,27 @@ void SelectionManager::renderSelection(Renderer& renderer, Camera& camera) {
 }
 
 void SelectionManager::selectObject(Object* object) {
-    if (!object) return;
-    
-    for (Object* obj : m_selectedObjects) {
-        if (obj) obj->setSelected(false);
+    if (!object) {
+        LOG_WARN("SelectionManager::selectObject called with null object");
+        return;
     }
     
+    // Сначала снимаем выделение со всех объектов
+    for (Object* obj : m_selectedObjects) {
+        if (obj) {
+            obj->setSelected(false);
+        }
+    }
+    
+    // Очищаем список и добавляем новый объект
     m_selectedObjects.clear();
     m_selectedObjects.push_back(object);
     object->setSelected(true);
     
+    // Устанавливаем выбранный объект в сцене (это важно!)
     m_scene.setSelectedObject(object);
+    
+    LOG_INFO("SelectionManager: Object '{}' selected", object->getName());
 }
 
 void SelectionManager::deselectAll() {
@@ -84,6 +97,8 @@ Object* SelectionManager::pickObject(const Ray& ray) {
     Object* closestObject = nullptr;
     
     const auto& objects = m_scene.getObjects();
+    LOG_DEBUG("SelectionManager: Ray picking, checking {} objects", objects.size());
+    
     for (const auto& obj : objects) {
         float distance;
         bool hit = false;
@@ -121,26 +136,34 @@ Object* SelectionManager::pickObject(const Ray& ray) {
 }
 
 void SelectionManager::handleMousePicking(const Vec2& mousePos, const Camera& camera) {
+    // Создаем луч из точки экрана
     Ray ray = camera.screenPointToRay(mousePos);
     Object* hitObject = pickObject(ray);
     
-    if (Input::isKeyHeld(GLFW_KEY_LEFT_CONTROL)) {
-        // Multi-selection
-        if (hitObject) {
-            auto it = std::find(m_selectedObjects.begin(), m_selectedObjects.end(), hitObject);
-            if (it != m_selectedObjects.end()) {
-                removeFromSelection(hitObject);
-            } else {
-                addToSelection(hitObject);
-            }
+    // Проверяем, был ли это двойной клик
+    bool isDoubleClick = Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT);
+    
+    // Логируем результаты
+    if (hitObject) {
+        LOG_INFO("SelectionManager: Ray hit object '{}'", hitObject->getName());
+        
+        if (isDoubleClick) {
+            LOG_INFO("SelectionManager: Double click on object '{}'", hitObject->getName());
         }
     } else {
-        // Single selection
-        if (hitObject) {
-            selectObject(hitObject);
-        } else {
-            deselectAll();
-        }
+        LOG_INFO("SelectionManager: Ray did not hit any object");
+        return; // Если ничего не попало, выходим
+    }
+    
+    // Выбираем объект
+    selectObject(hitObject);
+    
+    // Если это двойной клик, фокусируем камеру на объекте
+    if (isDoubleClick && m_objectFocusCallback) {
+        Vec3 position = hitObject->getTransform().position;
+        float radius = hitObject->getTransform().scale.x;
+        LOG_INFO("SelectionManager: Focusing camera on object '{}'", hitObject->getName());
+        m_objectFocusCallback(position, radius);
     }
 }
 
@@ -185,8 +208,18 @@ bool SelectionManager::rayIntersectSphere(const Ray& ray, const Vec3& center, fl
     float t1 = (-b - sqrtD) / (2.0f * a);
     float t2 = (-b + sqrtD) / (2.0f * a);
     
-    distance = (t1 > 0.001f) ? t1 : t2;
-    return distance > 0.001f;
+    // Берем ближайшее положительное пересечение
+    if (t1 > 0.001f) {
+        distance = t1;
+        return true;
+    }
+    
+    if (t2 > 0.001f) {
+        distance = t2;
+        return true;
+    }
+    
+    return false;
 }
 
 bool SelectionManager::rayIntersectPlane(const Ray& ray, const Vec3& point, const Vec3& normal, float& distance) {

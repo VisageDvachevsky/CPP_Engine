@@ -28,6 +28,10 @@ void Application::init() {
     LOG_INFO("Initializing MiniGPU Engine...");
     
     m_window = std::make_unique<Window>(1920, 1080, "MiniGPU Engine - Unreal Style Editor");
+
+    Input::init(m_window->handle());
+
+
     m_renderer = std::make_unique<Renderer>();
     m_scene = std::make_unique<Scene>();
     m_camera = std::make_unique<Camera>();
@@ -76,12 +80,12 @@ void Application::run() {
 
 void Application::handleEvents() {
     m_window->pollEvents();
-    Input::update(*m_window);
+    Input::update();
     m_fileWatcher->update();
 }
 
 void Application::update(float dt) {
-    // Update systems
+
     m_scene->update(dt);
     m_editor->update(dt);
     

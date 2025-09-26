@@ -71,14 +71,38 @@ void Viewport::onResize(int width, int height) {
 void Viewport::handleInput(Scene& scene, Camera& camera) {
     ImGuiIO& io = ImGui::GetIO();
     
+    // Если ImGui захватил ввод, игнорируем его для viewport
+    if (io.WantCaptureMouse) {
+        return;
+    }
+    
     ImVec2 mousePos = ImGui::GetMousePos();
     Vec2 viewportMousePos = Vec2{mousePos.x - m_viewportPos.x, mousePos.y - m_viewportPos.y};
     
-    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGuizmo::IsOver() && !io.WantCaptureMouse) {
-        m_editor.getSelection().handleMousePicking(viewportMousePos, camera);
+    // Проверяем, находится ли мышь внутри вьюпорта
+    bool mouseInViewport = viewportMousePos.x >= 0 && viewportMousePos.y >= 0 && 
+                           viewportMousePos.x < m_viewportSize.x && viewportMousePos.y < m_viewportSize.y;
+                           
+    if (!mouseInViewport) {
+        return;
     }
     
-    // Camera controls handled by EditorCamera when viewport focused
+    // Обрабатываем клики мыши
+    if (Input::isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT) || 
+        Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT)) {
+        
+        // Показываем в логе тип события
+        if (Input::isMouseButtonDoubleClicked(GLFW_MOUSE_BUTTON_LEFT)) {
+            LOG_INFO("Viewport: Double click detected at ({}, {})", viewportMousePos.x, viewportMousePos.y);
+        } else {
+            LOG_INFO("Viewport: Single click detected at ({}, {})", viewportMousePos.x, viewportMousePos.y);
+        }
+        
+        // В любом случае отправляем событие в SelectionManager
+        if (!ImGuizmo::IsOver()) {
+            m_editor.getSelection().handleMousePicking(viewportMousePos, camera);
+        }
+    }
 }
 
 void Viewport::renderViewportContent(Scene& scene, Camera& camera, Renderer& renderer) {

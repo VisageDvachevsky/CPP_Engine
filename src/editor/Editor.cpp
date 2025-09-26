@@ -20,12 +20,26 @@ void Editor::initializeEditor() {
     m_editorCamera = std::make_unique<EditorCamera>(m_camera);
     m_selectionManager = std::make_unique<SelectionManager>(m_scene);
     m_transformGizmo = std::make_unique<TransformGizmo>();
+    
+    // Устанавливаем колбэк для фокусировки на объекте
+    m_selectionManager->setObjectFocusCallback(
+        [this](const Vec3& position, float radius) {
+            m_editorCamera->focusOnObject(position, radius);
+        }
+    );
+    
     m_gui = std::make_unique<GUI>(m_window, *this);
     
-    LOG_INFO("Editor systems initialized");
+    LOG_INFO("Editor systems initialized with focus callback");
 }
 
 void Editor::update(float dt) {
+    m_isViewportFocused = m_gui->isViewportFocused();
+    m_isViewportHovered = m_gui->isViewportHovered();
+    
+    LOG_DEBUG("Editor update: viewport focused={}, hovered={}", 
+              m_isViewportFocused, m_isViewportHovered);
+              
     updateEditor(dt);
 }
 
@@ -49,8 +63,15 @@ void Editor::renderEditor() {
     m_renderer.render(m_scene, m_camera);
     
     if (m_selectionManager->hasSelection() && m_isViewportFocused) {
-        m_transformGizmo->render(m_renderer, m_camera);
+        Object* selectedObject = m_selectionManager->getSelectedObject();
+        if (selectedObject) {
+            LOG_INFO("Editor: Rendering transform gizmo for object '{}'", selectedObject->getName());
+            m_transformGizmo->update(*selectedObject, m_camera);
+            m_transformGizmo->render(m_renderer, m_camera);
+        }
     }
+    
+    m_selectionManager->renderSelection(m_renderer, m_camera);
     
     m_selectionManager->renderSelection(m_renderer, m_camera);
     

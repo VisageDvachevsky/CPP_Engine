@@ -406,6 +406,11 @@ void Renderer::updateUniforms(const Scene& scene, const Camera& camera) {
             m_pathTracerShader->setInt(base + ".materialType", static_cast<int>(obj->getMaterial().type));
             m_pathTracerShader->setFloat(base + ".roughness", obj->getMaterial().roughness);
             m_pathTracerShader->setFloat(base + ".ior", obj->getMaterial().ior);
+            m_pathTracerShader->setFloat(base + ".metalness", obj->getMaterial().metalness);
+            
+            // Check if material has emission
+            Vec3 emission = obj->getMaterial().emission;
+            m_pathTracerShader->setVec3(base + ".emission", emission);
             
             sphereCount++;
         }
@@ -421,6 +426,8 @@ void Renderer::updateUniforms(const Scene& scene, const Camera& camera) {
             m_pathTracerShader->setVec3(base + ".color", color);
             m_pathTracerShader->setInt(base + ".materialType", static_cast<int>(obj->getMaterial().type));
             m_pathTracerShader->setFloat(base + ".roughness", obj->getMaterial().roughness);
+            m_pathTracerShader->setFloat(base + ".metalness", obj->getMaterial().metalness);
+            m_pathTracerShader->setVec3(base + ".emission", obj->getMaterial().emission);
             
             planeCount++;
         }
